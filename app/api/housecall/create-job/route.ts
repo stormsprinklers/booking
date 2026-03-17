@@ -20,8 +20,8 @@ async function findExistingCustomerId(
         WHERE LOWER(TRIM(email)) = LOWER(TRIM(${email.trim()}))
         LIMIT 1
       `;
-      const row = Array.isArray(rows) ? rows[0] : null;
-      if (row?.id) return row.id as string;
+      const row = (Array.isArray(rows) ? rows[0] : null) as { id?: string } | null;
+      if (row?.id) return row.id;
     }
     if (phone && normalizePhone(phone).length >= 10) {
       const normPhone = normalizePhone(phone);
@@ -30,8 +30,8 @@ async function findExistingCustomerId(
         WHERE REGEXP_REPLACE(phone, '\D', '', 'g') LIKE ${"%" + normPhone}
         LIMIT 1
       `;
-      const row = Array.isArray(rows) ? rows[0] : null;
-      if (row?.id) return row.id as string;
+      const row = (Array.isArray(rows) ? rows[0] : null) as { id?: string } | null;
+      if (row?.id) return row.id;
     }
     return null;
   } catch {
