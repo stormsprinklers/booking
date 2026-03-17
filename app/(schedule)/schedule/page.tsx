@@ -48,23 +48,23 @@ export default function ScheduleAddressPage() {
   }, [searchParams, setServiceCategory, setPricingOption]);
 
   const handleValidate = async () => {
-    const addr = inputValue.trim();
-    if (!addr) {
-      setResult({ valid: false, message: "Please enter your address." });
+    const zip = inputValue.trim().replace(/\D/g, "").slice(0, 5);
+    if (zip.length !== 5) {
+      setResult({ valid: false, message: "Please enter a valid 5-digit zip code." });
       return;
     }
     setValidating(true);
     setResult(null);
-    setAddress(addr);
+    setAddress(zip);
     try {
-      const res = await fetch(`/api/address/validate?address=${encodeURIComponent(addr)}`);
+      const res = await fetch(`/api/address/validate?zip=${encodeURIComponent(zip)}`);
       const data = await res.json();
       setValidating(false);
       if (data.valid && data.serviceArea) {
         setServiceAreaId(data.serviceArea.id);
         setResult({ valid: true, message: `We serve your area: ${data.serviceArea.name}` });
       } else {
-        const fallback = validateAddress(addr);
+        const fallback = validateAddress(zip);
         if (fallback.valid && fallback.serviceArea) {
           setServiceAreaId(fallback.serviceArea.id);
           setResult({ valid: true, message: `We serve your area: ${fallback.serviceArea.name}` });
@@ -74,7 +74,7 @@ export default function ScheduleAddressPage() {
         }
       }
     } catch {
-      const res = validateAddress(addr);
+      const res = validateAddress(zip);
       setValidating(false);
       if (res.valid && res.serviceArea) {
         setServiceAreaId(res.serviceArea.id);
@@ -114,18 +114,20 @@ export default function ScheduleAddressPage() {
             </p>
           </div>
         )}
-        <h1 className="text-2xl font-bold text-[#102341]">Where are you located?</h1>
+        <h1 className="text-2xl font-bold text-[#102341]">Are we in your area?</h1>
         <p className="mt-2 text-[#102341]/70">
-          Enter your address so we can confirm service area and show available times.
+          Enter your zip code to check if we serve your location.
         </p>
 
         <div className="mt-8">
           <Input
-            label="Street address"
-            placeholder="123 Main St, City, State ZIP"
+            label="Enter your Zip Code"
+            placeholder="12345"
+            inputMode="numeric"
+            maxLength={5}
             value={inputValue}
             onChange={(e) => {
-              setInputValue(e.target.value);
+              setInputValue(e.target.value.replace(/\D/g, "").slice(0, 5));
               setResult(null);
             }}
             onKeyDown={(e) => e.key === "Enter" && handleValidate()}
