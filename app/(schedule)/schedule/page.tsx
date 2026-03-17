@@ -36,6 +36,7 @@ export default function ScheduleAddressPage() {
 
   useEffect(() => {
     track("booking_started");
+    fetch("/api/sync/housecall", { method: "POST" }).catch(() => {});
     const cat = (searchParams.get("category") ?? "repair") as ServiceCategoryId;
     const opt = buildPricingOptionFromParams(searchParams);
     setServiceCategory(cat);
@@ -46,7 +47,7 @@ export default function ScheduleAddressPage() {
     }
   }, [searchParams, setServiceCategory, setPricingOption]);
 
-  const handleValidate = () => {
+  const handleValidate = async () => {
     const addr = inputValue.trim();
     if (!addr) {
       setResult({ valid: false, message: "Please enter your address." });
@@ -54,10 +55,27 @@ export default function ScheduleAddressPage() {
     }
     setValidating(true);
     setResult(null);
-    setTimeout(() => {
+    setAddress(addr);
+    try {
+      const res = await fetch(`/api/address/validate?address=${encodeURIComponent(addr)}`);
+      const data = await res.json();
+      setValidating(false);
+      if (data.valid && data.serviceArea) {
+        setServiceAreaId(data.serviceArea.id);
+        setResult({ valid: true, message: `We serve your area: ${data.serviceArea.name}` });
+      } else {
+        const fallback = validateAddress(addr);
+        if (fallback.valid && fallback.serviceArea) {
+          setServiceAreaId(fallback.serviceArea.id);
+          setResult({ valid: true, message: `We serve your area: ${fallback.serviceArea.name}` });
+        } else {
+          setServiceAreaId(null);
+          setResult({ valid: false, message: "We don't serve this area yet. Please call us for options." });
+        }
+      }
+    } catch {
       const res = validateAddress(addr);
       setValidating(false);
-      setAddress(addr);
       if (res.valid && res.serviceArea) {
         setServiceAreaId(res.serviceArea.id);
         setResult({ valid: true, message: `We serve your area: ${res.serviceArea.name}` });
@@ -65,7 +83,7 @@ export default function ScheduleAddressPage() {
         setServiceAreaId(null);
         setResult({ valid: false, message: "We don't serve this area yet. Please call us for options." });
       }
-    }, 300);
+    }
   };
 
   const handleContinue = () => {

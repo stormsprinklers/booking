@@ -34,11 +34,28 @@ Open [http://localhost:3000](http://localhost:3000). Root redirects to `/pricing
 | Design tokens | `app/globals.css` |
 | UI components | `components/ui/` |
 
+## Housecall Pro + Neon integration
+
+The app integrates with [Housecall Pro](https://docs.housecallpro.com/docs/housecall-public-api) and stores synced data in Neon Postgres.
+
+**Required env vars:** `HOUSECALLPRO_API_KEY`, `DATABASE_URL`
+
+**Setup:**
+1. Create a Neon project at [neon.tech](https://neon.tech) and add `DATABASE_URL` to Vercel env.
+2. Run `scripts/init-db.sql` in the Neon SQL Editor to create tables.
+3. Set `HOUSECALLPRO_API_KEY` in Vercel env.
+
+**Flow:**
+- When the user starts booking, `POST /api/sync/housecall` runs and syncs employees, service zones, and customers from Housecall Pro into Neon.
+- Address validation uses service zones from the DB (`GET /api/address/validate?address=...`).
+- Availability uses `GET /api/housecall/availability?service_zone_id=...`, which fetches booking windows from Housecall Pro for employees in that zone.
+
+**Endpoints:** [Employees](https://docs.housecallpro.com/docs/housecall-public-api/303ee235f23fa-get-employees), [Service Zones](https://docs.housecallpro.com/docs/housecall-public-api/38b31504822e9-get-service-zones), [Customers](https://docs.housecallpro.com/docs/housecall-public-api/042bd3bf861ae-get-customers), [Booking Windows](https://docs.housecallpro.com/docs/housecall-public-api/c80920efe7ef1-booking-windows)
+
 ## Production wiring
 
-- **Backend:** Replace mock APIs with Postgres (bookings, customers, availability)
-- **Scheduling:** Real technician availability and routing
-- **Address:** Google Places / address validation API
+- **Address:** Falls back to mock if HCP/DB not configured.
+- **Availability:** Falls back to mock if HCP returns no slots.
 - **SMS/Email:** Twilio, Resend, etc.
 - **Analytics:** Wire `lib/analytics.ts` to GA, PostHog, etc.
 

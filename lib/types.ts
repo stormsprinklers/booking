@@ -33,9 +33,11 @@ export interface PricingInputs {
   serviceCategory: ServiceCategoryId;
   propertySize?: "small" | "medium" | "large";
   issueType?: string;
+  issueTypes?: string[];
   scope?: string;
   addOnIds?: string[];
   urgency?: "standard" | "priority" | "emergency";
+  issueStartTime?: "today" | "within-week" | "weeks-ago" | "ongoing" | "dont-know";
 }
 
 // Service area & technicians

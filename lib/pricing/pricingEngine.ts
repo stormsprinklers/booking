@@ -2,11 +2,15 @@ import type { PricingInputs, PricingOption } from "@/lib/types";
 import { addOns } from "@/lib/mock/addOns";
 
 export function getPricingOptions(inputs: PricingInputs): PricingOption[] {
-  const { serviceCategory, propertySize, issueType, scope, addOnIds = [], urgency } = inputs;
+  const { serviceCategory, propertySize, issueType, issueTypes, scope, addOnIds = [], urgency } = inputs;
 
   switch (serviceCategory) {
     case "repair":
-      return getRepairPricing(issueType ?? "general", propertySize ?? "medium", addOnIds, urgency);
+      return getRepairPricing(
+        issueTypes?.length ? issueTypes : issueType ? [issueType] : ["general"],
+        propertySize ?? "medium",
+        addOnIds
+      );
     case "upgrade":
       return getUpgradePricing(scope ?? "standard", propertySize ?? "medium", addOnIds);
     case "seasonal":
@@ -17,29 +21,42 @@ export function getPricingOptions(inputs: PricingInputs): PricingOption[] {
 }
 
 function getRepairPricing(
-  issueType: string,
+  issueTypes: string[],
   propertySize: string,
-  addOnIds: string[],
-  urgency?: string
+  addOnIds: string[]
 ): PricingOption[] {
   const basePrices: Record<string, { min: number; max: number }> = {
     leak: { min: 125, max: 250 },
-    "no-pressure": { min: 150, max: 300 },
     "not-turning-on": { min: 100, max: 200 },
+    "not-turning-off": { min: 100, max: 225 },
+    "low-pressure": { min: 150, max: 300 },
+    "controller-issue": { min: 75, max: 200 },
+    "broken-backflow": { min: 150, max: 350 },
+    "broken-filter": { min: 75, max: 175 },
+    "adding-upgrade": { min: 99, max: 250 },
+    "main-shutoff": { min: 125, max: 275 },
+    "valve-repair": { min: 100, max: 250 },
     "broken-heads": { min: 75, max: 150 },
     general: { min: 99, max: 199 },
   };
 
-  const price = basePrices[issueType] ?? basePrices.general;
+  const prices = issueTypes.map((id) => basePrices[id] ?? basePrices.general);
+  const price = prices.length
+    ? {
+        min: prices.reduce((s, p) => s + p.min, 0),
+        max: prices.reduce((s, p) => s + p.max, 0),
+      }
+    : basePrices.general;
   const sizeMultiplier = propertySize === "large" ? 1.2 : propertySize === "small" ? 0.9 : 1;
-  const urgencyFee = urgency === "emergency" ? 75 : urgency === "priority" ? 25 : 0;
 
   const addOnTotal = addOns
     .filter((a) => addOnIds.includes(a.id) && a.id !== "membership")
     .reduce((sum, a) => sum + a.price, 0);
 
-  const min = Math.round((price.min * sizeMultiplier + urgencyFee + addOnTotal));
-  const max = Math.round((price.max * sizeMultiplier + urgencyFee + addOnTotal));
+  const min = Math.round(price.min * sizeMultiplier + addOnTotal);
+  const max = Math.round(price.max * sizeMultiplier + addOnTotal);
+
+  const selectedAddOns = addOns.filter((a) => addOnIds.includes(a.id) && a.id !== "membership");
 
   return [
     {
@@ -48,9 +65,13 @@ function getRepairPricing(
       title: "Repair Service",
       price: min,
       priceRange: { min, max },
-      description: "Our technician will diagnose and fix your sprinkler issue.",
-      estimatedDuration: "1–2 hours",
+      description:
+        issueTypes.length > 1
+          ? "Our technician will diagnose and fix all selected sprinkler issues."
+          : "Our technician will diagnose and fix your sprinkler issue.",
+      estimatedDuration: selectedAddOns.length ? "1.5–2.5 hours" : "1–2 hours",
       includes: ["Diagnosis", "Repair labor", "Basic parts up to $50"],
+      addOns: selectedAddOns.length ? selectedAddOns : undefined,
     },
   ];
 }

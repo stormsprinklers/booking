@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Card } from "@/components/ui";
+import { Button } from "@/components/ui";
 import { useBooking } from "@/contexts/BookingContext";
 import { getAvailableSlots } from "@/lib/booking/getAvailableSlots";
 import type { AvailabilitySlot } from "@/lib/types";
@@ -22,6 +22,7 @@ export default function ScheduleAvailabilityPage() {
   const router = useRouter();
   const { serviceAreaId, serviceCategory, setSlot } = useBooking();
   const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<AvailabilitySlot | null>(null);
 
   useEffect(() => {
@@ -29,8 +30,31 @@ export default function ScheduleAvailabilityPage() {
       router.push("/schedule");
       return;
     }
-    const s = getAvailableSlots(serviceAreaId, serviceCategory);
-    setSlots(s);
+    let cancelled = false;
+    setLoading(true);
+    fetch(`/api/housecall/availability?service_zone_id=${encodeURIComponent(serviceAreaId)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return;
+        const apiSlots = (data.slots ?? []).map(
+          (s: { id: string; date: string; startTime: string; endTime: string; label: string; technicianId?: string }) =>
+            ({ ...s, spotsLeft: undefined } as AvailabilitySlot)
+        );
+        if (apiSlots.length > 0) {
+          setSlots(apiSlots);
+        } else {
+          setSlots(getAvailableSlots(serviceAreaId, serviceCategory));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setSlots(getAvailableSlots(serviceAreaId, serviceCategory));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [serviceAreaId, serviceCategory, router]);
 
   const handleSelect = (slot: AvailabilitySlot) => {
@@ -87,8 +111,11 @@ export default function ScheduleAvailabilityPage() {
           ))}
         </div>
 
-        {slots.length === 0 && !serviceAreaId && (
-          <p className="mt-8 text-[#102341]/70">Loading...</p>
+        {loading && (
+          <p className="mt-8 text-[#102341]/70">Loading availability...</p>
+        )}
+        {!loading && slots.length === 0 && (
+          <p className="mt-8 text-[#102341]/70">No available slots. Please try again or call to schedule.</p>
         )}
 
         {selected && (

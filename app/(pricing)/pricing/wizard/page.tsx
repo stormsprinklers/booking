@@ -16,11 +16,29 @@ const PROPERTY_SIZES = [
 ] as const;
 
 const REPAIR_ISSUES = [
+  { id: "not-turning-on", label: "Sprinklers not turning on" },
+  { id: "not-turning-off", label: "Sprinklers not turning off" },
+  { id: "low-pressure", label: "Low pressure" },
+  { id: "controller-issue", label: "Controller / timer issue" },
   { id: "leak", label: "Leak or wet spots" },
-  { id: "no-pressure", label: "Low or no water pressure" },
-  { id: "not-turning-on", label: "System not turning on" },
+  { id: "broken-backflow", label: "Broken backflow preventer" },
+  { id: "broken-filter", label: "Broken filter" },
+  { id: "adding-upgrade", label: "Adding an upgrade" },
+  { id: "main-shutoff", label: "Main shutoff valve (stop and waste)" },
+  { id: "valve-repair", label: "Sprinkler valve repair" },
   { id: "broken-heads", label: "Broken or misaligned heads" },
   { id: "general", label: "Not sure / other" },
+];
+
+const ISSUE_START_OPTIONS: {
+  id: "today" | "within-week" | "weeks-ago" | "ongoing" | "dont-know";
+  label: string;
+}[] = [
+  { id: "today", label: "Today" },
+  { id: "within-week", label: "Within the week" },
+  { id: "weeks-ago", label: "Multiple weeks ago" },
+  { id: "ongoing", label: "Ongoing / long-term issue" },
+  { id: "dont-know", label: "Don't know" },
 ];
 
 const UPGRADE_SCOPES = [
@@ -29,10 +47,10 @@ const UPGRADE_SCOPES = [
   { id: "full", label: "New system install" },
 ];
 
-const URGENCY_OPTIONS: { id: "standard" | "priority" | "emergency"; label: string }[] = [
-  { id: "standard", label: "Standard (within a week)" },
-  { id: "priority", label: "Priority (2–3 days, +$25)" },
-  { id: "emergency", label: "Emergency (next day, +$75)" },
+const REPAIR_ADDONS = [
+  { id: "tuneup", title: "Full System Tune-Up", price: 79 },
+  { id: "smart-controller", title: "Smart Sprinkler Controller", price: 199 },
+  { id: "annual-plan", title: "Annual Maintenance Plan", price: 149 },
 ];
 
 export default function PricingWizardPage() {
@@ -52,7 +70,7 @@ export default function PricingWizardPage() {
   const totalSteps = categoryParam === "repair" ? 3 : categoryParam === "upgrade" ? 3 : 2;
   const stepLabels =
     categoryParam === "repair"
-      ? ["Issue", "Property", "Urgency"]
+      ? ["Issue", "Property", "When"]
       : categoryParam === "upgrade"
         ? ["Scope", "Property", "Add-ons"]
         : ["Service", "Add-ons"];
@@ -71,7 +89,7 @@ export default function PricingWizardPage() {
 
   const canProceed = () => {
     if (categoryParam === "repair") {
-      if (step === 1) return !!inputs.issueType;
+      if (step === 1) return (inputs.issueTypes ?? []).length > 0;
       if (step === 2) return !!inputs.propertySize;
       if (step === 3) return true;
     }
@@ -101,25 +119,71 @@ export default function PricingWizardPage() {
           {categoryParam === "repair" && (
             <>
               {step === 1 && (
-                <div>
-                  <p className="mb-3 font-medium text-[#102341]">
-                    What’s the main issue?
-                  </p>
-                  <div className="space-y-2">
-                    {REPAIR_ISSUES.map((opt) => (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        onClick={() => setInputs({ issueType: opt.id })}
-                        className={`w-full rounded-xl border-2 p-4 text-left transition ${
-                          inputs.issueType === opt.id
-                            ? "border-[#4C9BC8] bg-[#C2E4F0]/30"
-                            : "border-[#F0F0F0] hover:border-[#4C9BC8]/50"
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
+                <div className="space-y-6">
+                  <div>
+                    <p className="mb-3 font-medium text-[#102341]">
+                      What issues are you experiencing? (select all that apply)
+                    </p>
+                    <div className="space-y-2">
+                      {REPAIR_ISSUES.map((opt) => {
+                        const selected = (inputs.issueTypes ?? []).includes(opt.id);
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => {
+                              const current = inputs.issueTypes ?? [];
+                              const next = selected
+                                ? current.filter((x) => x !== opt.id)
+                                : [...current, opt.id];
+                              setInputs({ issueTypes: next });
+                            }}
+                            className={`flex w-full items-center justify-between rounded-xl border-2 p-4 text-left transition ${
+                              selected
+                                ? "border-[#4C9BC8] bg-[#C2E4F0]/30"
+                                : "border-[#F0F0F0] hover:border-[#4C9BC8]/50"
+                            }`}
+                          >
+                            {opt.label}
+                            {selected && <span className="text-[#4C9BC8]">✓</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="mb-3 font-medium text-[#102341]">
+                      Add to your repair
+                    </p>
+                    <div className="space-y-2">
+                      {REPAIR_ADDONS.map((opt) => {
+                        const selected = (inputs.addOnIds ?? []).includes(opt.id);
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => {
+                              const ids = inputs.addOnIds ?? [];
+                              const next = selected
+                                ? ids.filter((x) => x !== opt.id)
+                                : [...ids, opt.id];
+                              setInputs({ addOnIds: next });
+                            }}
+                            className={`flex w-full items-center justify-between rounded-xl border-2 p-4 text-left transition ${
+                              selected
+                                ? "border-[#4C9BC8] bg-[#C2E4F0]/30"
+                                : "border-[#F0F0F0] hover:border-[#4C9BC8]/50"
+                            }`}
+                          >
+                            <span>
+                              {opt.title}{" "}
+                              <span className="text-[#102341]/60">+${opt.price}</span>
+                            </span>
+                            {selected && <span className="text-[#4C9BC8]">✓</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               )}
@@ -149,16 +213,16 @@ export default function PricingWizardPage() {
               {step === 3 && (
                 <div>
                   <p className="mb-3 font-medium text-[#102341]">
-                    How soon do you need service?
+                    When did the issue start?
                   </p>
                   <div className="space-y-2">
-                    {URGENCY_OPTIONS.map((opt) => (
+                    {ISSUE_START_OPTIONS.map((opt) => (
                       <button
                         key={opt.id}
                         type="button"
-                        onClick={() => setInputs({ urgency: opt.id })}
+                        onClick={() => setInputs({ issueStartTime: opt.id })}
                         className={`w-full rounded-xl border-2 p-4 text-left transition ${
-                          inputs.urgency === opt.id
+                          inputs.issueStartTime === opt.id
                             ? "border-[#4C9BC8] bg-[#C2E4F0]/30"
                             : "border-[#F0F0F0] hover:border-[#4C9BC8]/50"
                         }`}

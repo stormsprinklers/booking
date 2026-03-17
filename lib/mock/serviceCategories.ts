@@ -8,8 +8,8 @@ export const serviceCategories: ServiceCategory[] = [
   },
   {
     id: "upgrade",
-    title: "System Upgrade / Install",
-    description: "New system install, zones, smart controller, or major upgrades",
+    title: "Landscaping / Sprinkler Installation",
+    description: "New sprinkler system install, landscaping irrigation, or major upgrades",
   },
   {
     id: "seasonal",
