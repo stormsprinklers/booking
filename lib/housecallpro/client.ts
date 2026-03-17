@@ -5,24 +5,30 @@
 
 const BASE_URL = process.env.HOUSECALLPRO_API_BASE ?? "https://api.housecallpro.com";
 
-async function fetchHCP<T>(path: string): Promise<T> {
+async function fetchHCP<T>(path: string, options?: { method?: string; body?: unknown }): Promise<T> {
   const apiKey = process.env.HOUSECALLPRO_API_KEY;
   if (!apiKey) throw new Error("HOUSECALLPRO_API_KEY is not set");
 
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const fetchOptions: RequestInit = {
+    method: options?.method ?? "GET",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
       Accept: "application/json",
     },
-  });
+  };
+  if (options?.body !== undefined) {
+    (fetchOptions as { body: string }).body = JSON.stringify(options.body);
+  }
+  const res = await fetch(`${BASE_URL}${path}`, fetchOptions);
 
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Housecall Pro API error ${res.status}: ${text}`);
   }
 
-  return res.json() as Promise<T>;
+  const text = await res.text();
+  return (text ? JSON.parse(text) : {}) as T;
 }
 
 type Employee = { id: string; first_name?: string; last_name?: string; name?: string; service_zone_ids?: string[] };
@@ -55,4 +61,22 @@ export async function getBookingWindows(employeeId: string): Promise<{ booking_w
   );
   const windows = (res.booking_windows ?? res.data ?? res.items ?? []) as BookingWindow[];
   return { booking_windows: Array.isArray(windows) ? windows : [] };
+}
+
+export interface CreateJobPayload {
+  description?: string;
+  scheduled_start?: string;
+  scheduled_end?: string;
+  customer_id?: string;
+  customer?: { first_name?: string; last_name?: string; email?: string; phone?: string };
+  property?: { address_line_1?: string; city?: string; state?: string; zip?: string };
+  assigned_to?: string;
+}
+
+export async function createJob(payload: CreateJobPayload): Promise<{ job?: { id: string } }> {
+  const res = await fetchHCP<Record<string, unknown>>("/jobs", {
+    method: "POST",
+    body: payload,
+  });
+  return res as { job?: { id: string } };
 }

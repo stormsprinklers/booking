@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card } from "@/components/ui";
 import { useBooking } from "@/contexts/BookingContext";
@@ -11,21 +11,50 @@ function formatDayLabel(dateStr: string): string {
   return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 }
 
+function toISO(slot: { date: string; startTime: string; endTime: string }): { start: string; end: string } {
+  const start = `${slot.date}T${slot.startTime}:00`;
+  const end = `${slot.date}T${slot.endTime}:00`;
+  return { start, end };
+}
+
 export default function ScheduleConfirmPage() {
   const router = useRouter();
   const { pricingOption, slot, address, customer } = useBooking();
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!slot) router.push("/schedule/availability");
     else if (!pricingOption) router.push("/schedule");
   }, [slot, pricingOption, router]);
 
-  const handleConfirm = () => {
-    track("booking_completed", {
-      service: pricingOption?.title,
-      slotId: slot?.id,
-    });
-    router.push("/schedule/success");
+  const handleConfirm = async () => {
+    if (!slot || !pricingOption) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const { start, end } = toISO(slot);
+      const res = await fetch("/api/housecall/create-job", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          description: `${pricingOption.title}: ${pricingOption.description}`,
+          scheduledStart: start,
+          scheduledEnd: end,
+          customer: { name: customer.name, email: customer.email, phone: customer.phone },
+          address,
+          zip: address,
+          employeeId: slot.technicianId,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to create job");
+      track("booking_completed", { service: pricingOption.title, slotId: slot.id, jobId: data.jobId });
+      router.push("/schedule/success");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
+      setSubmitting(false);
+    }
   };
 
   if (!slot || !pricingOption) return null;
@@ -75,14 +104,18 @@ export default function ScheduleConfirmPage() {
           )}
         </Card>
 
+        {error && (
+          <p className="mt-4 text-sm text-red-600">{error}</p>
+        )}
         <Button
           variant="primary"
           fullWidth
           size="lg"
           className="mt-8"
           onClick={handleConfirm}
+          disabled={submitting}
         >
-          Confirm booking
+          {submitting ? "Creating job…" : "Confirm booking"}
         </Button>
       </div>
     </div>
