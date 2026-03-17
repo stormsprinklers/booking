@@ -48,29 +48,47 @@ export async function POST(request: NextRequest) {
       scheduledEnd,
       customer,
       address,
+      addressLine1,
+      addressLine2,
+      city,
+      state,
       zip,
       employeeId,
     } = body;
+
+    let customerId: string | null = null;
+    if (customer?.email || customer?.phone) {
+      customerId = await findExistingCustomerId(customer.email, customer.phone);
+      if (!customerId && customer) {
+        const nameParts = (customer.name ?? "Customer").trim().split(/\s+/);
+        const { id } = await hcp.createCustomer({
+          first_name: nameParts[0] ?? "Customer",
+          last_name: nameParts.slice(1).join(" ") ?? "",
+          email: customer.email ?? undefined,
+          phone: customer.phone ?? undefined,
+        });
+        customerId = id;
+      }
+    }
+    if (!customerId) {
+      return NextResponse.json({ error: "Customer email or phone is required" }, { status: 400 });
+    }
 
     const payload: Record<string, unknown> = {
       description: description || "Online booking",
       scheduled_start: scheduledStart,
       scheduled_end: scheduledEnd,
+      customer_id: customerId,
     };
-
-    const existingId = await findExistingCustomerId(customer?.email, customer?.phone);
-    if (existingId) {
-      payload.customer_id = existingId;
-    } else if (customer) {
-      payload.customer = {
-        first_name: customer.name?.split(" ")[0] ?? customer.name,
-        last_name: customer.name?.split(" ").slice(1).join(" ") ?? "",
-        email: customer.email,
-        phone: customer.phone,
+    const line1 = addressLine1 || address || zip;
+    if (line1 || city || state || zip) {
+      payload.property = {
+        address_line_1: line1,
+        ...(addressLine2 && { address_line_2: addressLine2 }),
+        ...(city && { city }),
+        ...(state && { state }),
+        zip: zip || address || undefined,
       };
-    }
-    if (address || zip) {
-      payload.property = { address_line_1: address || zip, zip };
     }
     if (employeeId) {
       payload.assigned_to = employeeId;

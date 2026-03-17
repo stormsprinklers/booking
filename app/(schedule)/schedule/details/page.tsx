@@ -13,12 +13,20 @@ export default function ScheduleDetailsPage() {
   const [name, setName] = useState(customer.name ?? "");
   const [email, setEmail] = useState(customer.email ?? "");
   const [phone, setPhone] = useState(customer.phone ?? "");
+  const [addressLine1, setAddressLine1] = useState(customer.addressLine1 ?? "");
+  const [addressLine2, setAddressLine2] = useState(customer.addressLine2 ?? "");
+  const [city, setCity] = useState(customer.city ?? "");
+  const [zip, setZip] = useState(customer.zip ?? address ?? "");
   const [notes, setNotes] = useState(customer.notes ?? "");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!slot) router.push("/schedule/availability");
   }, [slot, router]);
+
+  useEffect(() => {
+    if (address && !zip) setZip(address);
+  }, [address]);
 
   useEffect(() => {
     const handleBeforeUnload = () => {
@@ -41,13 +49,27 @@ export default function ScheduleDetailsPage() {
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "Valid email required";
     if (!phone.trim()) e.phone = "Phone is required";
     else if (!/^\d{10}$/.test(phone.replace(/\D/g, ""))) e.phone = "Valid 10-digit phone required";
+    if (!addressLine1.trim()) e.addressLine1 = "Street address is required";
+    if (!city.trim()) e.city = "City is required";
+    if (!zip.trim()) e.zip = "Zip code is required";
+    else if (!/^\d{5}$/.test(zip.replace(/\D/g, "").slice(0, 5))) e.zip = "Valid 5-digit zip required";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
   const handleSubmit = () => {
     if (!validate()) return;
-    updateCustomer({ name: name.trim(), email: email.trim(), phone: phone.trim(), notes: notes.trim() });
+    updateCustomer({
+      name: name.trim(),
+      email: email.trim(),
+      phone: phone.trim(),
+      addressLine1: addressLine1.trim(),
+      addressLine2: addressLine2.trim() || undefined,
+      city: city.trim(),
+      state: "UT",
+      zip: zip.replace(/\D/g, "").slice(0, 5),
+      notes: notes.trim(),
+    });
     track("details_entered");
     router.push("/schedule/confirm");
   };
@@ -89,11 +111,46 @@ export default function ScheduleDetailsPage() {
             error={errors.phone}
             required
           />
-          <div>
-            <p className="mb-1.5 text-sm font-medium text-[#102341]">Service address</p>
-            <p className="rounded-xl border-2 border-[#F0F0F0] bg-[#F0F0F0]/50 px-4 py-3 text-[#102341]/80">
-              {address || "—"}
-            </p>
+          <div className="space-y-4">
+            <p className="text-sm font-medium text-[#102341]">Service address</p>
+            <Input
+              label="Street address line 1"
+              placeholder="123 Main St"
+              value={addressLine1}
+              onChange={(e) => setAddressLine1(e.target.value)}
+              error={errors.addressLine1}
+              required
+            />
+            <Input
+              label="Street address line 2 (optional)"
+              placeholder="Apt 4, Suite 100"
+              value={addressLine2}
+              onChange={(e) => setAddressLine2(e.target.value)}
+            />
+            <div className="grid grid-cols-3 gap-4">
+              <Input
+                label="City"
+                placeholder="Salt Lake City"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                error={errors.city}
+                required
+              />
+              <Input
+                label="State"
+                value="UT"
+                readOnly
+                className="bg-[#F0F0F0]/50"
+              />
+              <Input
+                label="Zip code"
+                placeholder="84101"
+                value={zip}
+                onChange={(e) => setZip(e.target.value)}
+                error={errors.zip}
+                required
+              />
+            </div>
           </div>
           <Input
             label="Notes (optional)"

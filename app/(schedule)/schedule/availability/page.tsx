@@ -18,12 +18,34 @@ function formatDayLabel(dateStr: string): string {
   return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
+type Technician = { id: string; name: string };
+
 export default function ScheduleAvailabilityPage() {
   const router = useRouter();
   const { serviceAreaId, serviceCategory, setSlot } = useBooking();
   const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
+  const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<AvailabilitySlot | null>(null);
+
+  useEffect(() => {
+    if (!serviceAreaId) {
+      router.push("/schedule");
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/housecall/employees?service_zone_id=${encodeURIComponent(serviceAreaId)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return;
+        const emps = (data.employees ?? []).map((e: { id: string; name: string }) => ({ id: e.id, name: e.name }));
+        setTechnicians(emps);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [serviceAreaId]);
 
   useEffect(() => {
     if (!serviceAreaId) {
@@ -79,6 +101,15 @@ export default function ScheduleAvailabilityPage() {
         <p className="mt-2 text-[#102341]/70">
           Select an available slot. All times are in your local timezone.
         </p>
+
+        {technicians.length > 0 && (
+          <div className="mt-6 rounded-xl border border-[#4C9BC8]/30 bg-[#C2E4F0]/20 p-4">
+            <p className="text-sm font-medium text-[#102341]/80">Technicians available in your area</p>
+            <p className="mt-1 text-[#102341]">
+              {technicians.map((t) => t.name).join(", ")}
+            </p>
+          </div>
+        )}
 
         <div className="mt-8 space-y-6">
           {Object.entries(byDate).map(([date, daySlots]) => (

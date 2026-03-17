@@ -48,7 +48,15 @@ export default function ScheduleSuccessPage() {
           </div>
           <div>
             <p className="text-sm font-medium text-[#102341]/60">Where</p>
-            <p className="text-[#102341]">{address}</p>
+            <p className="whitespace-pre-line text-[#102341]">
+              {[
+                customer.addressLine1,
+                customer.addressLine2,
+                [customer.city, customer.state, customer.zip ?? address].filter(Boolean).join(", "),
+              ]
+                .filter(Boolean)
+                .join("\n") || address || "—"}
+            </p>
           </div>
           <div>
             <p className="text-sm font-medium text-[#102341]/60">Price estimate</p>

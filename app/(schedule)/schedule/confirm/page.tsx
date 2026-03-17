@@ -42,8 +42,11 @@ export default function ScheduleConfirmPage() {
           scheduledStart: start,
           scheduledEnd: end,
           customer: { name: customer.name, email: customer.email, phone: customer.phone },
-          address,
-          zip: address,
+          addressLine1: customer.addressLine1,
+          addressLine2: customer.addressLine2,
+          city: customer.city,
+          state: customer.state ?? "UT",
+          zip: customer.zip ?? address,
           employeeId: slot.technicianId,
         }),
       });
@@ -88,7 +91,15 @@ export default function ScheduleConfirmPage() {
           </div>
           <div>
             <p className="text-sm font-medium text-[#102341]/60">Address</p>
-            <p className="text-[#102341]">{address}</p>
+            <p className="whitespace-pre-line text-[#102341]">
+              {[
+                customer.addressLine1,
+                customer.addressLine2,
+                [customer.city, customer.state, customer.zip ?? address].filter(Boolean).join(", "),
+              ]
+                .filter(Boolean)
+                .join("\n") || address || "—"}
+            </p>
           </div>
           <div>
             <p className="text-sm font-medium text-[#102341]/60">Contact</p>

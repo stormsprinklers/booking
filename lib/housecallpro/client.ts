@@ -31,15 +31,35 @@ async function fetchHCP<T>(path: string, options?: { method?: string; body?: unk
   return (text ? JSON.parse(text) : {}) as T;
 }
 
-type Employee = { id: string; first_name?: string; last_name?: string; name?: string; service_zone_ids?: string[] };
+type EmployeeRaw = { id: string; first_name?: string; last_name?: string; name?: string; service_zone_ids?: string[]; service_zone_id?: string; service_zones?: { id?: string }[] };
+type Employee = { id: string; first_name?: string; last_name?: string; name?: string; service_zone_ids: string[] };
 type ServiceZone = { id: string; name?: string; zip_codes?: string[] };
+
+function normalizeEmployeeZoneIds(e: EmployeeRaw): string[] {
+  if (Array.isArray(e.service_zone_ids) && e.service_zone_ids.length > 0) return e.service_zone_ids;
+  if (e.service_zone_id && typeof e.service_zone_id === "string") return [e.service_zone_id];
+  if (Array.isArray(e.service_zones)) {
+    const ids = e.service_zones.map((z) => z?.id).filter((id): id is string => Boolean(id));
+    if (ids.length > 0) return ids;
+  }
+  return [];
+}
 type Customer = { id: string; first_name?: string; last_name?: string; email?: string; phone?: string; address_line_1?: string; city?: string; state?: string; zip?: string };
 type BookingWindow = { start_time: string; end_time: string; employee_id?: string };
 
 export async function getEmployees(): Promise<{ employees: Employee[] }> {
   const res = await fetchHCP<Record<string, unknown>>("/employees");
-  const employees = (res.employees ?? res.data ?? res.items ?? []) as Employee[];
-  return { employees: Array.isArray(employees) ? employees : [] };
+  const raw = (res.employees ?? res.data ?? res.items ?? []) as EmployeeRaw[];
+  const employees: Employee[] = Array.isArray(raw)
+    ? raw.map((e) => ({
+        id: e.id,
+        first_name: e.first_name,
+        last_name: e.last_name,
+        name: e.name ?? [e.first_name, e.last_name].filter(Boolean).join(" "),
+        service_zone_ids: normalizeEmployeeZoneIds(e),
+      }))
+    : [];
+  return { employees };
 }
 
 export async function getServiceZones(): Promise<{ service_zones: ServiceZone[] }> {
@@ -53,6 +73,27 @@ export async function getCustomers(params?: { per_page?: number; page?: number }
   const res = await fetchHCP<Record<string, unknown>>(`/customers${qs}`);
   const customers = (res.customers ?? res.data ?? res.items ?? []) as Customer[];
   return { customers: Array.isArray(customers) ? customers : [] };
+}
+
+export interface CreateCustomerPayload {
+  first_name: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  address_line_1?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+}
+
+export async function createCustomer(payload: CreateCustomerPayload): Promise<{ id: string }> {
+  const res = await fetchHCP<{ id?: string; customer?: { id: string } }>("/customers", {
+    method: "POST",
+    body: payload,
+  });
+  const id = res.id ?? (res as { customer?: { id: string } }).customer?.id;
+  if (!id) throw new Error("Housecall Pro createCustomer did not return an id");
+  return { id };
 }
 
 export async function getBookingWindows(employeeId: string): Promise<{ booking_windows: BookingWindow[] }> {
@@ -69,7 +110,7 @@ export interface CreateJobPayload {
   scheduled_end?: string;
   customer_id?: string;
   customer?: { first_name?: string; last_name?: string; email?: string; phone?: string };
-  property?: { address_line_1?: string; city?: string; state?: string; zip?: string };
+  property?: { address_line_1?: string; address_line_2?: string; city?: string; state?: string; zip?: string };
   assigned_to?: string;
 }
 
