@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
       return arr.includes(serviceZoneId);
     });
 
-    const slots: { id: string; date: string; startTime: string; endTime: string; label: string; technicianId?: string }[] = [];
+    const slots: { id: string; date: string; startTime: string; endTime: string; label: string; technicianId?: string; technicianName?: string }[] = [];
     const seen = new Set<string>();
 
     for (const emp of employees) {
@@ -68,6 +68,7 @@ export async function GET(request: NextRequest) {
               endTime: end,
               label,
               technicianId: emp.id,
+              technicianName: emp.name,
             });
           }
         }

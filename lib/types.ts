@@ -62,6 +62,7 @@ export interface AvailabilitySlot {
   endTime: string; // "11:00"
   label: string; // "9–11 AM"
   technicianId?: string;
+  technicianName?: string;
   spotsLeft?: number;
 }
 

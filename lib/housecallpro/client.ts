@@ -121,3 +121,28 @@ export async function createJob(payload: CreateJobPayload): Promise<{ job?: { id
   });
   return res as { job?: { id: string } };
 }
+
+export async function addJobNote(jobId: string, content: string): Promise<void> {
+  await fetchHCP<unknown>(`/jobs/${encodeURIComponent(jobId)}/notes`, {
+    method: "POST",
+    body: { content },
+  });
+}
+
+export async function updateJobSchedule(
+  jobId: string,
+  scheduledStart: string,
+  scheduledEnd: string
+): Promise<void> {
+  await fetchHCP<unknown>(`/jobs/${encodeURIComponent(jobId)}`, {
+    method: "PATCH",
+    body: { scheduled_start: scheduledStart, scheduled_end: scheduledEnd },
+  });
+}
+
+export async function dispatchJobToEmployee(jobId: string, employeeId: string): Promise<void> {
+  await fetchHCP<unknown>(`/jobs/${encodeURIComponent(jobId)}`, {
+    method: "PATCH",
+    body: { assigned_to: employeeId },
+  });
+}

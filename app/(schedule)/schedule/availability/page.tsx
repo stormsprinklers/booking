@@ -59,7 +59,7 @@ export default function ScheduleAvailabilityPage() {
       .then((data) => {
         if (cancelled) return;
         const apiSlots = (data.slots ?? []).map(
-          (s: { id: string; date: string; startTime: string; endTime: string; label: string; technicianId?: string }) =>
+          (s: { id: string; date: string; startTime: string; endTime: string; label: string; technicianId?: string; technicianName?: string }) =>
             ({ ...s, spotsLeft: undefined } as AvailabilitySlot)
         );
         if (apiSlots.length > 0) {
@@ -129,7 +129,10 @@ export default function ScheduleAvailabilityPage() {
                         : "border-[#F0F0F0] text-[#102341] hover:border-[#4C9BC8]"
                     }`}
                   >
-                    {slot.label}
+                    <span className="block">{slot.label}</span>
+                    {slot.technicianName && (
+                      <span className="mt-1 block text-xs text-[#102341]/70">{slot.technicianName}</span>
+                    )}
                     {slot.spotsLeft && slot.spotsLeft <= 2 && (
                       <span className="mt-1 block text-xs text-[#F17388]">
                         Only {slot.spotsLeft} left

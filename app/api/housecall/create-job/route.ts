@@ -54,7 +54,14 @@ export async function POST(request: NextRequest) {
       state,
       zip,
       employeeId,
+      jobNotes,
     } = body;
+
+    const tzOffset = "-06:00";
+    const startIso = scheduledStart && !scheduledStart.includes("+") && !scheduledStart.endsWith("Z")
+      ? `${String(scheduledStart).replace(/Z?$/, "")}${tzOffset}` : scheduledStart;
+    const endIso = scheduledEnd && !scheduledEnd.includes("+") && !scheduledEnd.endsWith("Z")
+      ? `${String(scheduledEnd).replace(/Z?$/, "")}${tzOffset}` : scheduledEnd;
 
     let customerId: string | null = null;
     if (customer?.email || customer?.phone) {
@@ -76,8 +83,8 @@ export async function POST(request: NextRequest) {
 
     const payload: Record<string, unknown> = {
       description: description || "Online booking",
-      scheduled_start: scheduledStart,
-      scheduled_end: scheduledEnd,
+      scheduled_start: startIso,
+      scheduled_end: endIso,
       customer_id: customerId,
     };
     const line1 = addressLine1 || address || zip;
@@ -96,6 +103,31 @@ export async function POST(request: NextRequest) {
 
     const res = await hcp.createJob(payload as hcp.CreateJobPayload);
     const jobId = (res.job as { id?: string })?.id ?? (res as { id?: string }).id;
+    if (!jobId) throw new Error("Create job did not return job ID");
+
+    if (jobNotes?.trim()) {
+      try {
+        await hcp.addJobNote(jobId, jobNotes.trim());
+      } catch (noteErr) {
+        console.warn("Add job note failed:", noteErr);
+      }
+    }
+
+    if (startIso && endIso) {
+      try {
+        await hcp.updateJobSchedule(jobId, startIso, endIso);
+      } catch (schedErr) {
+        console.warn("Update job schedule failed:", schedErr);
+      }
+    }
+
+    if (employeeId) {
+      try {
+        await hcp.dispatchJobToEmployee(jobId, employeeId);
+      } catch (dispatchErr) {
+        console.warn("Dispatch job to employee failed:", dispatchErr);
+      }
+    }
 
     return NextResponse.json({ ok: true, jobId });
   } catch (err) {

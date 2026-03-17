@@ -19,7 +19,7 @@ function toISO(slot: { date: string; startTime: string; endTime: string }): { st
 
 export default function ScheduleConfirmPage() {
   const router = useRouter();
-  const { pricingOption, slot, address, customer } = useBooking();
+  const { pricingOption, slot, address, customer, serviceCategory } = useBooking();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,6 +27,18 @@ export default function ScheduleConfirmPage() {
     if (!slot) router.push("/schedule/availability");
     else if (!pricingOption) router.push("/schedule");
   }, [slot, pricingOption, router]);
+
+  const buildJobNotes = () => {
+    const categoryLabel = { repair: "Repair", upgrade: "Upgrade/Install", seasonal: "Seasonal" }[serviceCategory] ?? serviceCategory;
+    const parts: string[] = [
+      `Service category: ${categoryLabel}`,
+      `Service: ${pricingOption?.title ?? "Online booking"}`,
+      pricingOption?.description ? `Problem/Scope: ${pricingOption.description}` : "",
+      pricingOption?.price != null ? `Quoted price online: $${pricingOption.price}${pricingOption?.priceRange ? `–$${pricingOption.priceRange.max}` : ""}` : "",
+    ].filter(Boolean);
+    if (customer.notes?.trim()) parts.push(`Customer notes: ${customer.notes.trim()}`);
+    return parts.join("\n\n");
+  };
 
   const handleConfirm = async () => {
     if (!slot || !pricingOption) return;
@@ -48,6 +60,7 @@ export default function ScheduleConfirmPage() {
           state: customer.state ?? "UT",
           zip: customer.zip ?? address,
           employeeId: slot.technicianId,
+          jobNotes: buildJobNotes(),
         }),
       });
       const data = await res.json();
@@ -101,6 +114,12 @@ export default function ScheduleConfirmPage() {
                 .join("\n") || address || "—"}
             </p>
           </div>
+          {slot.technicianName && (
+            <div>
+              <p className="text-sm font-medium text-[#102341]/60">Technician</p>
+              <p className="text-[#102341]">{slot.technicianName}</p>
+            </div>
+          )}
           <div>
             <p className="text-sm font-medium text-[#102341]/60">Contact</p>
             <p className="text-[#102341]">
