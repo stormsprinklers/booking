@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+:root {
+  /* Storm Sprinklers brand colors */
+  --pink: #F17388;
+  --pink-hover: #e85d73;
+  --light-blue: #C2E4F0;
+  --medium-blue: #4C9BC8;
+  --navy: #102341;
+  --white: #FFFFFF;
+  --black: #000000;
+  --light-grey: #F0F0F0;
+  --background: #ffffff;
+  --foreground: #102341;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-pink: var(--pink);
+  --color-pink-hover: var(--pink-hover);
+  --color-light-blue: var(--light-blue);
+  --color-medium-blue: var(--medium-blue);
+  --color-navy: var(--navy);
+  --color-light-grey: var(--light-grey);
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}

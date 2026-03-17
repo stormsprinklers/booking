@@ -1,0 +1,141 @@
+"use client";
+
+import { useSearchParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Button, Card, Input } from "@/components/ui";
+import { useBooking } from "@/contexts/BookingContext";
+import { validateAddress } from "@/lib/service-area/validateAddress";
+import { track } from "@/lib/analytics";
+import type { ServiceCategoryId } from "@/lib/types";
+import type { PricingOption } from "@/lib/types";
+
+function buildPricingOptionFromParams(params: URLSearchParams): PricingOption | null {
+  const optionId = params.get("optionId");
+  const title = params.get("title");
+  const price = params.get("price");
+  const description = params.get("description") ?? "";
+  if (!optionId || !title || !price) return null;
+  return {
+    id: optionId,
+    tier: "single",
+    title,
+    price: parseInt(price, 10),
+    description,
+    estimatedDuration: "1–2 hours",
+    includes: [],
+  };
+}
+
+export default function ScheduleAddressPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const { setServiceCategory, setPricingOption, pricingOption, address, setAddress, setServiceAreaId } = useBooking();
+  const [inputValue, setInputValue] = useState(address);
+  const [validating, setValidating] = useState(false);
+  const [result, setResult] = useState<{ valid: boolean; message: string } | null>(null);
+
+  useEffect(() => {
+    track("booking_started");
+    const cat = (searchParams.get("category") ?? "repair") as ServiceCategoryId;
+    const opt = buildPricingOptionFromParams(searchParams);
+    setServiceCategory(cat);
+    if (opt) {
+      setPricingOption(opt);
+    } else {
+      setPricingOption(null);
+    }
+  }, [searchParams, setServiceCategory, setPricingOption]);
+
+  const handleValidate = () => {
+    const addr = inputValue.trim();
+    if (!addr) {
+      setResult({ valid: false, message: "Please enter your address." });
+      return;
+    }
+    setValidating(true);
+    setResult(null);
+    setTimeout(() => {
+      const res = validateAddress(addr);
+      setValidating(false);
+      setAddress(addr);
+      if (res.valid && res.serviceArea) {
+        setServiceAreaId(res.serviceArea.id);
+        setResult({ valid: true, message: `We serve your area: ${res.serviceArea.name}` });
+      } else {
+        setServiceAreaId(null);
+        setResult({ valid: false, message: "We don't serve this area yet. Please call us for options." });
+      }
+    }, 300);
+  };
+
+  const handleContinue = () => {
+    if (result?.valid) {
+      track("address_entered", { address: inputValue });
+      router.push("/schedule/availability");
+    }
+  };
+
+  const hasPricingFromUrl = !!searchParams.get("optionId");
+
+  return (
+    <div className="min-h-screen bg-white">
+      <div className="mx-auto max-w-xl px-4 py-12">
+        {hasPricingFromUrl && pricingOption && (
+          <div className="mb-6 rounded-xl bg-[#C2E4F0]/30 p-4">
+            <p className="text-sm text-[#102341]/70">Booking</p>
+            <p className="font-semibold text-[#102341]">{pricingOption.title}</p>
+          </div>
+        )}
+        {!hasPricingFromUrl && (
+          <div className="mb-6 rounded-xl border border-[#F0F0F0] bg-[#F0F0F0]/50 p-4">
+            <p className="text-[#102341]">
+              No service selected.{" "}
+              <a href="/pricing" className="font-medium text-[#4C9BC8] underline">
+                Get pricing first
+              </a>
+            </p>
+          </div>
+        )}
+        <h1 className="text-2xl font-bold text-[#102341]">Where are you located?</h1>
+        <p className="mt-2 text-[#102341]/70">
+          Enter your address so we can confirm service area and show available times.
+        </p>
+
+        <div className="mt-8">
+          <Input
+            label="Street address"
+            placeholder="123 Main St, City, State ZIP"
+            value={inputValue}
+            onChange={(e) => {
+              setInputValue(e.target.value);
+              setResult(null);
+            }}
+            onKeyDown={(e) => e.key === "Enter" && handleValidate()}
+          />
+          <Button
+            variant="secondary"
+            fullWidth
+            className="mt-4"
+            onClick={handleValidate}
+            disabled={validating}
+          >
+            {validating ? "Checking..." : "Check service area"}
+          </Button>
+
+          {result && (
+            <Card className={`mt-4 ${result.valid ? "border-[#4C9BC8] bg-[#C2E4F0]/20" : "border-red-200 bg-red-50"}`}>
+              <p className={result.valid ? "text-[#102341]" : "text-red-700"}>
+                {result.message}
+              </p>
+              {result.valid && (
+                <Button variant="primary" fullWidth className="mt-4" onClick={handleContinue}>
+                  See available times →
+                </Button>
+              )}
+            </Card>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
