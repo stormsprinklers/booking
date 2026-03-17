@@ -52,6 +52,11 @@ The app integrates with [Housecall Pro](https://docs.housecallpro.com/docs/house
 
 **Endpoints:** [Employees](https://docs.housecallpro.com/docs/housecall-public-api/303ee235f23fa-get-employees), [Service Zones](https://docs.housecallpro.com/docs/housecall-public-api/38b31504822e9-get-service-zones), [Customers](https://docs.housecallpro.com/docs/housecall-public-api/042bd3bf861ae-get-customers), [Booking Windows](https://docs.housecallpro.com/docs/housecall-public-api/c80920efe7ef1-booking-windows)
 
+**Troubleshooting (nothing in Neon):**
+1. Run `scripts/init-db.sql` in the Neon SQL Editor.
+2. Call `POST /api/sync/housecall` and check the response: if `errors` is present, the Housecall Pro API is failing (wrong base URL, auth, or plan).
+3. Set `HOUSECALLPRO_API_BASE` if your API uses a different base (default: `https://api.housecallpro.com/v1`).
+
 ## Production wiring
 
 - **Address:** Falls back to mock if HCP/DB not configured.

@@ -12,12 +12,26 @@ export async function POST() {
         { status: 500 }
       );
     }
+    if (!process.env.HOUSECALLPRO_API_KEY) {
+      return NextResponse.json(
+        { error: "HOUSECALLPRO_API_KEY not configured" },
+        { status: 500 }
+      );
+    }
 
-    const [employeesRes, serviceZonesRes, customersRes] = await Promise.all([
-      hcp.getEmployees().catch(() => ({ employees: [] })),
-      hcp.getServiceZones().catch(() => ({ service_zones: [] })),
-      hcp.getCustomers({ per_page: 100 }).catch(() => ({ customers: [] })),
-    ]);
+    const errors: string[] = [];
+    const employeesRes = await hcp.getEmployees().catch((e) => {
+      errors.push(`Employees: ${e instanceof Error ? e.message : String(e)}`);
+      return { employees: [] };
+    });
+    const serviceZonesRes = await hcp.getServiceZones().catch((e) => {
+      errors.push(`Service zones: ${e instanceof Error ? e.message : String(e)}`);
+      return { service_zones: [] };
+    });
+    const customersRes = await hcp.getCustomers({ per_page: 100 }).catch((e) => {
+      errors.push(`Customers: ${e instanceof Error ? e.message : String(e)}`);
+      return { customers: [] };
+    });
 
     const employees = employeesRes.employees;
     const zones = serviceZonesRes.service_zones;
@@ -89,6 +103,7 @@ export async function POST() {
     return NextResponse.json({
       ok: true,
       synced: { employees: employees.length, serviceZones: zones.length, customers: customers.length },
+      ...(errors.length > 0 && { errors }),
     });
   } catch (err) {
     console.error("Housecall Pro sync error:", err);

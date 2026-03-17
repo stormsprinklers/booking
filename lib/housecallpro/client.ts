@@ -3,7 +3,7 @@
  * Docs: https://docs.housecallpro.com/docs/housecall-public-api
  */
 
-const BASE_URL = process.env.HOUSECALLPRO_API_BASE ?? "https://restapi.housecallpro.com/rest/v2";
+const BASE_URL = process.env.HOUSECALLPRO_API_BASE ?? "https://api.housecallpro.com";
 
 async function fetchHCP<T>(path: string): Promise<T> {
   const apiKey = process.env.HOUSECALLPRO_API_KEY;
