@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db/client";
+import { getTechnicianPhotoUrl } from "@/lib/config/technicianPhotos";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,7 @@ export async function GET(request: NextRequest) {
         id: r.id,
         name: (r.name ?? [r.first_name, r.last_name].filter(Boolean).join(" ")) || r.id,
         serviceZoneIds: arr as string[],
+        photoUrl: getTechnicianPhotoUrl(r.id),
       };
     });
 

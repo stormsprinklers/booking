@@ -18,7 +18,7 @@ function formatDayLabel(dateStr: string): string {
   return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
-type Technician = { id: string; name: string };
+type Technician = { id: string; name: string; photoUrl?: string | null };
 
 export default function ScheduleAvailabilityPage() {
   const router = useRouter();
@@ -38,7 +38,13 @@ export default function ScheduleAvailabilityPage() {
       .then((res) => res.json())
       .then((data) => {
         if (cancelled) return;
-        const emps = (data.employees ?? []).map((e: { id: string; name: string }) => ({ id: e.id, name: e.name }));
+        const emps = (data.employees ?? []).map(
+          (e: { id: string; name: string; photoUrl?: string | null }) => ({
+            id: e.id,
+            name: e.name,
+            photoUrl: e.photoUrl,
+          })
+        );
         setTechnicians(emps);
       })
       .catch(() => {});
@@ -109,9 +115,20 @@ export default function ScheduleAvailabilityPage() {
         {technicians.length > 0 && (
           <div className="mt-6 rounded-xl border border-[#4C9BC8]/30 bg-[#C2E4F0]/20 p-4">
             <p className="text-sm font-medium text-[#102341]/80">Technicians available in your area</p>
-            <p className="mt-1 text-[#102341]">
-              {technicians.map((t) => t.name).join(", ")}
-            </p>
+            <div className="mt-3 flex flex-wrap gap-3">
+              {technicians.map((t) => (
+                <div key={t.id} className="flex items-center gap-2">
+                  {t.photoUrl && (
+                    <img
+                      src={t.photoUrl}
+                      alt={t.name}
+                      className="h-10 w-10 rounded-full object-cover"
+                    />
+                  )}
+                  <span className="text-sm text-[#102341]">{t.name}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
