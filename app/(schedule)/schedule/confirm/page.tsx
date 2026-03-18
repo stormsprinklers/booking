@@ -6,6 +6,7 @@ import { Button, Card } from "@/components/ui";
 import { useBooking } from "@/contexts/BookingContext";
 import { track } from "@/lib/analytics";
 import { formatTechnicianDisplayName } from "@/lib/format/technicianName";
+import { INSTALL_QUOTE_EMPLOYEE_ID } from "@/lib/config/installQuoteTech";
 
 function formatDayLabel(dateStr: string): string {
   const d = new Date(dateStr + "T12:00:00");
@@ -48,6 +49,23 @@ export default function ScheduleConfirmPage() {
     setError(null);
     try {
       const { start, end } = toISO(slot);
+      const effectiveEmployeeId =
+        slot.technicianId ?? (serviceCategory === "upgrade" ? INSTALL_QUOTE_EMPLOYEE_ID : undefined);
+      // #region agent log
+      fetch("http://127.0.0.1:7816/ingest/6871cd52-8abc-4996-a074-5937cf159ac7", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "d0054e" },
+        body: JSON.stringify({
+          sessionId: "d0054e",
+          runId: "confirm-submit",
+          hypothesisId: "H-confirm",
+          location: "app/(schedule)/schedule/confirm/page.tsx:handleConfirm",
+          message: "payload employeeId",
+          data: { slotTechnicianId: slot.technicianId, serviceCategory, effectiveEmployeeId },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
       const res = await fetch("/api/housecall/create-job", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -61,7 +79,7 @@ export default function ScheduleConfirmPage() {
           city: customer.city,
           state: customer.state ?? "UT",
           zip: customer.zip ?? address,
-          employeeId: slot.technicianId,
+          employeeId: effectiveEmployeeId,
           jobNotes: buildJobNotes(),
         }),
       });

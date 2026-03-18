@@ -99,11 +99,35 @@ export default function ScheduleAvailabilityPage() {
         if (apiSlots.length > 0) {
           setSlots(apiSlots);
         } else {
-          setSlots(getAvailableSlots(serviceAreaId, serviceCategory));
+          const fallback = getAvailableSlots(serviceAreaId, serviceCategory);
+          if (serviceCategory === "upgrade") {
+            setSlots(
+              fallback.map((s) => ({
+                ...s,
+                technicianId: INSTALL_QUOTE_EMPLOYEE_ID,
+                technicianName: "Installation specialist",
+              }))
+            );
+          } else {
+            setSlots(fallback);
+          }
         }
       })
       .catch(() => {
-        if (!cancelled) setSlots(getAvailableSlots(serviceAreaId, serviceCategory));
+        if (!cancelled) {
+          const fallback = getAvailableSlots(serviceAreaId, serviceCategory);
+          if (serviceCategory === "upgrade") {
+            setSlots(
+              fallback.map((s) => ({
+                ...s,
+                technicianId: INSTALL_QUOTE_EMPLOYEE_ID,
+                technicianName: "Installation specialist",
+              }))
+            );
+          } else {
+            setSlots(fallback);
+          }
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
 
     const debug = {
       customerId,
-      employeeId,
+      employeeId: employeeId ?? null,
       schedule: payload.schedule,
     };
 
