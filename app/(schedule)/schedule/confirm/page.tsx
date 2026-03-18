@@ -23,7 +23,7 @@ export default function ScheduleConfirmPage() {
   const { pricingOption, slot, address, customer, serviceCategory } = useBooking();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [debugInfo, setDebugInfo] = useState<unknown | null>(null);
+  const [debugInfo, setDebugInfo] = useState<any | null>(null);
 
   useEffect(() => {
     if (!slot) router.push("/schedule/availability");
