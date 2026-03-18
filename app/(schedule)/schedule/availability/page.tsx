@@ -54,7 +54,11 @@ export default function ScheduleAvailabilityPage() {
     }
     let cancelled = false;
     setLoading(true);
-    fetch(`/api/housecall/availability?service_zone_id=${encodeURIComponent(serviceAreaId)}`)
+    fetch(
+      `/api/housecall/availability?service_zone_id=${encodeURIComponent(
+        serviceAreaId
+      )}&category=${encodeURIComponent(serviceCategory)}`
+    )
       .then((res) => res.json())
       .then((data) => {
         if (cancelled) return;

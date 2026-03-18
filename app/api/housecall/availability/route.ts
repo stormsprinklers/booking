@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db/client";
 import * as hcp from "@/lib/housecallpro/client";
+import { INSTALL_QUOTE_EMPLOYEE_ID, INSTALL_QUOTE_ZONE_BY_DOW } from "@/lib/config/installQuoteTech";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ function formatWindow(startIso: string, endIso: string): { date: string; start: 
 
 export async function GET(request: NextRequest) {
   const serviceZoneId = request.nextUrl.searchParams.get("service_zone_id");
+  const category = request.nextUrl.searchParams.get("category");
   if (!serviceZoneId) {
     return NextResponse.json(
       { error: "service_zone_id is required" },
@@ -35,6 +37,50 @@ export async function GET(request: NextRequest) {
         { error: "DATABASE_URL not configured" },
         { status: 500 }
       );
+    }
+
+    if (category === "upgrade") {
+      const rows = await sql`
+        SELECT id, name
+        FROM hcp_employees
+        WHERE id = ${INSTALL_QUOTE_EMPLOYEE_ID}
+      `;
+
+      const empRow = (Array.isArray(rows) ? rows[0] : null) as { id: string; name: string } | null;
+      const installerName = empRow?.name ?? "Installer";
+
+      const { booking_windows } = await hcp.getBookingWindows(INSTALL_QUOTE_EMPLOYEE_ID);
+
+      const slots: { id: string; date: string; startTime: string; endTime: string; label: string; technicianId?: string; technicianName?: string }[] = [];
+      const seen = new Set<string>();
+
+      for (const w of booking_windows) {
+        const endIso = w.end_time || new Date(new Date(w.start_time).getTime() + 2 * 60 * 60 * 1000).toISOString();
+        const { date, start, end, label } = formatWindow(w.start_time, endIso);
+        const d = new Date(`${date}T12:00:00`);
+        const dow = d.getDay();
+        // No install quotes on weekends
+        if (dow === 0 || dow === 6) continue;
+        const allowedZones = INSTALL_QUOTE_ZONE_BY_DOW[dow] ?? [];
+        if (allowedZones.length > 0 && !allowedZones.includes(serviceZoneId)) {
+          continue;
+        }
+        const key = `${date}-${start}-${INSTALL_QUOTE_EMPLOYEE_ID}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        slots.push({
+          id: key,
+          date,
+          startTime: start,
+          endTime: end,
+          label,
+          technicianId: INSTALL_QUOTE_EMPLOYEE_ID,
+          technicianName: installerName,
+        });
+      }
+
+      slots.sort((a, b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
+      return NextResponse.json({ slots });
     }
 
     const rows = await sql`
@@ -58,6 +104,10 @@ export async function GET(request: NextRequest) {
         for (const w of booking_windows) {
           const endIso = w.end_time || new Date(new Date(w.start_time).getTime() + 2 * 60 * 60 * 1000).toISOString();
           const { date, start, end, label } = formatWindow(w.start_time, endIso);
+          const d = new Date(`${date}T12:00:00`);
+          const dow = d.getDay();
+          // No booking of any type on weekends
+          if (dow === 0 || dow === 6) continue;
           const key = `${date}-${start}-${emp.id}`;
           if (!seen.has(key)) {
             seen.add(key);
