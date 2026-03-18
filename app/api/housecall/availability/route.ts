@@ -183,6 +183,8 @@ export async function GET(request: NextRequest) {
       bookingWindowsFirstEmployeeId: null,
       bookingWindowsFirstEmployeeBookingWindowsCount: null,
       bookingWindowsFirst: null,
+        bookingWindowsFirstRaw: null,
+        errors: [] as { employeeId: string; message: string }[],
     };
 
     for (const emp of employees) {
@@ -199,6 +201,12 @@ export async function GET(request: NextRequest) {
                 available: booking_windows[0].available ?? null,
               }
             : null;
+          debug.bookingWindowsFirstRaw = booking_windows.slice(0, 5).map((bw) => ({
+            start_time: bw.start_time,
+            end_time: bw.end_time ?? null,
+            available: bw.available ?? null,
+            employee_id: bw.employee_id ?? null,
+          }));
           // #region agent log
           fetch("http://127.0.0.1:7816/ingest/6871cd52-8abc-4996-a074-5937cf159ac7", {
             method: "POST",
@@ -250,7 +258,12 @@ export async function GET(request: NextRequest) {
             });
           }
         }
-      } catch {
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        (debug.errors as { employeeId: string; message: string }[]).push({
+          employeeId: emp.id,
+          message: msg.slice(0, 1200),
+        });
         continue;
       }
     }
