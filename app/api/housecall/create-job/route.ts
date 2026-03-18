@@ -105,6 +105,11 @@ export async function POST(request: NextRequest) {
         scheduled_end: endIso,
         ...(employeeId && { assigned_employee_ids: [employeeId] }),
       };
+      // Also set top-level fields; HCP PATCH semantics use top-level `scheduled_start/end`,
+      // and assignment appears to be ignored when only nested in `schedule`.
+      payload.scheduled_start = startIso;
+      payload.scheduled_end = endIso;
+      if (employeeId) payload.assigned_employee_ids = [employeeId];
     }
     if (jobNotes?.trim()) {
       payload.notes = jobNotes.trim();
@@ -168,6 +173,33 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const patchAttempts: {
+      updateJobAssignedEmployees?: "ok" | "error";
+      updateJobScheduleAssignedEmployees?: "ok" | "error";
+      errors?: string[];
+    } = { errors: [] };
+
+    if (employeeId) {
+      try {
+        await hcp.updateJobAssignedEmployees(jobId, [employeeId]);
+        patchAttempts.updateJobAssignedEmployees = "ok";
+      } catch (err) {
+        patchAttempts.updateJobAssignedEmployees = "error";
+        patchAttempts.errors?.push(
+          `updateJobAssignedEmployees: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+      try {
+        await hcp.updateJobScheduleAssignedEmployees(jobId, [employeeId]);
+        patchAttempts.updateJobScheduleAssignedEmployees = "ok";
+      } catch (err) {
+        patchAttempts.updateJobScheduleAssignedEmployees = "error";
+        patchAttempts.errors?.push(
+          `updateJobScheduleAssignedEmployees: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+    }
+
     let hcpAfterDispatch: ReturnType<typeof pickJobAssignmentFields> = null;
     if (employeeId) {
       try {
@@ -182,8 +214,12 @@ export async function POST(request: NextRequest) {
       customerId,
       employeeId: employeeId ?? null,
       schedule: payload.schedule,
+      assigned_employee_ids: payload.assigned_employee_ids ?? null,
+      scheduled_start: payload.scheduled_start ?? null,
+      scheduled_end: payload.scheduled_end ?? null,
       hcpAfterCreate,
       hcpAfterDispatch,
+      patchAttempts,
     };
 
     return NextResponse.json({ ok: true, jobId, debug });

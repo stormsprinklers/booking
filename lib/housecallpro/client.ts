@@ -131,6 +131,11 @@ export interface CreateJobPayload {
   customer_id: string;
   address_id?: string;
   description?: string;
+  // Some job fields (including schedule/assignment) are accepted at the top level.
+  // We keep `schedule` too, but prefer top-level for compatibility with PATCH semantics.
+  scheduled_start?: string;
+  scheduled_end?: string;
+  assigned_employee_ids?: string[];
   property?: {
     address_line_1?: string;
     address_line_2?: string;
@@ -180,6 +185,20 @@ export async function updateJobSchedule(
   await fetchHCP<unknown>(`/jobs/${encodeURIComponent(jobId)}`, {
     method: "PATCH",
     body: { scheduled_start: scheduledStart, scheduled_end: scheduledEnd },
+  });
+}
+
+export async function updateJobAssignedEmployees(jobId: string, employeeIds: string[]): Promise<void> {
+  await fetchHCP<unknown>(`/jobs/${encodeURIComponent(jobId)}`, {
+    method: "PATCH",
+    body: { assigned_employee_ids: employeeIds },
+  });
+}
+
+export async function updateJobScheduleAssignedEmployees(jobId: string, employeeIds: string[]): Promise<void> {
+  await fetchHCP<unknown>(`/jobs/${encodeURIComponent(jobId)}`, {
+    method: "PATCH",
+    body: { schedule: { assigned_employee_ids: employeeIds } },
   });
 }
 
