@@ -128,13 +128,29 @@ export async function getBookingWindows(employeeId: string): Promise<{ booking_w
 }
 
 export interface CreateJobPayload {
+  customer_id: string;
+  address_id?: string;
   description?: string;
-  scheduled_start?: string;
-  scheduled_end?: string;
-  customer_id?: string;
-  customer?: { first_name?: string; last_name?: string; email?: string; phone?: string };
-  property?: { address_line_1?: string; address_line_2?: string; city?: string; state?: string; zip?: string };
-  assigned_to?: string;
+  property?: {
+    address_line_1?: string;
+    address_line_2?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+  };
+  schedule?: {
+    scheduled_start?: string;
+    scheduled_end?: string;
+    arrival_window?: number;
+    anytime?: boolean;
+    anytime_start_date?: string;
+    assigned_employee_ids?: string[];
+  };
+  notes?: string;
+  job_fields?: {
+    job_type_id?: string;
+    business_unit_id?: string;
+  };
 }
 
 export async function createJob(payload: CreateJobPayload): Promise<{ job?: { id: string } }> {

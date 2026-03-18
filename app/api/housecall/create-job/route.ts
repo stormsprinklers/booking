@@ -81,11 +81,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Customer email or phone is required" }, { status: 400 });
     }
 
-    const payload: Record<string, unknown> = {
-      description: description || "Online booking",
-      scheduled_start: startIso,
-      scheduled_end: endIso,
+    const payload: hcp.CreateJobPayload = {
       customer_id: customerId,
+      description: description || "Online booking",
     };
     const line1 = addressLine1 || address || zip;
     if (line1 || city || state || zip) {
@@ -97,37 +95,20 @@ export async function POST(request: NextRequest) {
         zip: zip || address || undefined,
       };
     }
-    if (employeeId) {
-      payload.assigned_to = employeeId;
+    if (startIso && endIso) {
+      payload.schedule = {
+        scheduled_start: startIso,
+        scheduled_end: endIso,
+        ...(employeeId && { assigned_employee_ids: [employeeId] }),
+      };
+    }
+    if (jobNotes?.trim()) {
+      payload.notes = jobNotes.trim();
     }
 
-    const res = await hcp.createJob(payload as hcp.CreateJobPayload);
+    const res = await hcp.createJob(payload);
     const jobId = (res.job as { id?: string })?.id ?? (res as { id?: string }).id;
     if (!jobId) throw new Error("Create job did not return job ID");
-
-    if (jobNotes?.trim()) {
-      try {
-        await hcp.addJobNote(jobId, jobNotes.trim());
-      } catch (noteErr) {
-        console.warn("Add job note failed:", noteErr);
-      }
-    }
-
-    if (startIso && endIso) {
-      try {
-        await hcp.updateJobSchedule(jobId, startIso, endIso);
-      } catch (schedErr) {
-        console.warn("Update job schedule failed:", schedErr);
-      }
-    }
-
-    if (employeeId) {
-      try {
-        await hcp.dispatchJobToEmployee(jobId, employeeId);
-      } catch (dispatchErr) {
-        console.warn("Dispatch job to employee failed:", dispatchErr);
-      }
-    }
 
     return NextResponse.json({ ok: true, jobId });
   } catch (err) {

@@ -9,12 +9,22 @@ import type { AvailabilitySlot } from "@/lib/types";
 import { track } from "@/lib/analytics";
 
 function formatDayLabel(dateStr: string): string {
-  const d = new Date(dateStr + "T12:00:00");
+  const d = new Date(dateStr + "T00:00:00");
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const diff = Math.round((d.getTime() - today.getTime()) / 86400000);
-  if (diff === 1) return "Tomorrow";
-  if (diff === 2) return "In 2 days";
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+
+  const isTomorrow =
+    d.getFullYear() === tomorrow.getFullYear() &&
+    d.getMonth() === tomorrow.getMonth() &&
+    d.getDate() === tomorrow.getDate();
+
+  if (isTomorrow) {
+    const dayLabel = d.toLocaleDateString("en-US", { month: "long", day: "numeric" });
+    return `Tomorrow, ${dayLabel}`;
+  }
+
   return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
