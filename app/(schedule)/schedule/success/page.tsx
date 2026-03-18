@@ -12,7 +12,7 @@ function formatDayLabel(dateStr: string): string {
 }
 
 export default function ScheduleSuccessPage() {
-  const { pricingOption, slot, address, customer } = useBooking();
+  const { pricingOption, slot, address, customer, lastCreateJobDebug } = useBooking();
 
   if (!slot || !pricingOption) {
     return (
@@ -95,6 +95,17 @@ export default function ScheduleSuccessPage() {
             <li>Payment is due at time of service</li>
           </ul>
         </div>
+
+        {lastCreateJobDebug && (
+          <div className="mt-10 rounded-xl bg-[#F0F0F0] p-4">
+            <p className="mb-2 text-sm font-medium text-[#102341]/70">
+              Debug (Housecall payload summary)
+            </p>
+            <pre className="max-h-64 overflow-auto text-xs text-[#102341]/80">
+              {JSON.stringify(lastCreateJobDebug, null, 2)}
+            </pre>
+          </div>
+        )}
 
         <div className="mt-10 flex flex-col gap-4">
           <Link href="/pricing">

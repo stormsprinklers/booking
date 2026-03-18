@@ -8,6 +8,7 @@ import { getAvailableSlots } from "@/lib/booking/getAvailableSlots";
 import type { AvailabilitySlot } from "@/lib/types";
 import { track } from "@/lib/analytics";
 import { formatTechnicianDisplayName } from "@/lib/format/technicianName";
+import { getTechnicianPhotoUrl } from "@/lib/config/technicianPhotos";
 import { INSTALL_QUOTE_EMPLOYEE_ID } from "@/lib/config/installQuoteTech";
 
 function formatDayLabel(dateStr: string): string {
@@ -46,7 +47,12 @@ export default function ScheduleAvailabilityPage() {
       return;
     }
     let cancelled = false;
-    fetch(`/api/housecall/employees?service_zone_id=${encodeURIComponent(serviceAreaId)}`)
+    // For install quotes, fetch all employees so we can show the dedicated installer (they may not be in this zone in DB)
+    const url =
+      serviceCategory === "upgrade"
+        ? "/api/housecall/employees"
+        : `/api/housecall/employees?service_zone_id=${encodeURIComponent(serviceAreaId)}`;
+    fetch(url)
       .then((res) => res.json())
       .then((data) => {
         if (cancelled) return;
@@ -57,9 +63,11 @@ export default function ScheduleAvailabilityPage() {
             photoUrl: e.photoUrl,
           })
         );
-        // For installation quotes, only show the dedicated installer
         if (serviceCategory === "upgrade") {
-          emps = emps.filter((e: { id: string }) => e.id === INSTALL_QUOTE_EMPLOYEE_ID);
+          const install = emps.find((e: { id: string }) => e.id === INSTALL_QUOTE_EMPLOYEE_ID);
+          emps = install
+            ? [install]
+            : [{ id: INSTALL_QUOTE_EMPLOYEE_ID, name: "Installation specialist", photoUrl: getTechnicianPhotoUrl(INSTALL_QUOTE_EMPLOYEE_ID) }];
         }
         setTechnicians(emps);
       })

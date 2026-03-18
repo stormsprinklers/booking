@@ -20,7 +20,7 @@ function toISO(slot: { date: string; startTime: string; endTime: string }): { st
 
 export default function ScheduleConfirmPage() {
   const router = useRouter();
-  const { pricingOption, slot, address, customer, serviceCategory } = useBooking();
+  const { pricingOption, slot, address, customer, serviceCategory, setLastCreateJobDebug } = useBooking();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<any | null>(null);
@@ -66,8 +66,10 @@ export default function ScheduleConfirmPage() {
         }),
       });
       const data = await res.json();
-      setDebugInfo(data.debug ?? null);
+      const debug = data.debug ?? null;
+      setDebugInfo(debug);
       if (!res.ok) throw new Error(data.error ?? "Failed to create job");
+      setLastCreateJobDebug(debug && typeof debug === "object" ? (debug as Record<string, unknown>) : null);
       track("booking_completed", { service: pricingOption.title, slotId: slot.id, jobId: data.jobId });
       router.push("/schedule/success");
     } catch (e) {
