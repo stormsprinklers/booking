@@ -8,6 +8,7 @@ import { getAvailableSlots } from "@/lib/booking/getAvailableSlots";
 import type { AvailabilitySlot } from "@/lib/types";
 import { track } from "@/lib/analytics";
 import { formatTechnicianDisplayName } from "@/lib/format/technicianName";
+import { INSTALL_QUOTE_EMPLOYEE_ID } from "@/lib/config/installQuoteTech";
 
 function formatDayLabel(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
@@ -49,20 +50,24 @@ export default function ScheduleAvailabilityPage() {
       .then((res) => res.json())
       .then((data) => {
         if (cancelled) return;
-        const emps = (data.employees ?? []).map(
+        let emps = (data.employees ?? []).map(
           (e: { id: string; name: string; photoUrl?: string | null }) => ({
             id: e.id,
             name: e.name,
             photoUrl: e.photoUrl,
           })
         );
+        // For installation quotes, only show the dedicated installer
+        if (serviceCategory === "upgrade") {
+          emps = emps.filter((e: { id: string }) => e.id === INSTALL_QUOTE_EMPLOYEE_ID);
+        }
         setTechnicians(emps);
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [serviceAreaId]);
+  }, [serviceAreaId, serviceCategory]);
 
   useEffect(() => {
     if (!serviceAreaId) {
