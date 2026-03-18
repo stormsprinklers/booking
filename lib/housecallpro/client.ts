@@ -180,6 +180,25 @@ export async function updateJobSchedule(
 }
 
 export async function dispatchJobToEmployee(jobId: string, employeeId: string): Promise<void> {
+  // #region agent log
+  fetch('http://127.0.0.1:7816/ingest/6871cd52-8abc-4996-a074-5937cf159ac7',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'X-Debug-Session-Id':'d0054e'
+    },
+    body:JSON.stringify({
+      sessionId:'d0054e',
+      runId:'dispatch',
+      hypothesisId:'H4',
+      location:'lib/housecallpro/client.ts:182',
+      message:'dispatchJobToEmployee call',
+      data:{jobId,employeeId},
+      timestamp:Date.now()
+    })
+  }).catch(()=>{});
+  // #endregion
+
   await fetchHCP<unknown>(`/jobs/${encodeURIComponent(jobId)}/dispatch`, {
     method: "PUT",
     body: { employee_ids: [employeeId] },

@@ -77,6 +77,25 @@ export async function GET(request: NextRequest) {
           technicianId: INSTALL_QUOTE_EMPLOYEE_ID,
           technicianName: installerName,
         });
+
+        // #region agent log
+        fetch('http://127.0.0.1:7816/ingest/6871cd52-8abc-4996-a074-5937cf159ac7',{
+          method:'POST',
+          headers:{
+            'Content-Type':'application/json',
+            'X-Debug-Session-Id':'d0054e'
+          },
+          body:JSON.stringify({
+            sessionId:'d0054e',
+            runId:'availability',
+            hypothesisId:'H1',
+            location:'app/api/housecall/availability/route.ts:72',
+            message:'install availability slot',
+            data:{category,serviceZoneId,technicianId:INSTALL_QUOTE_EMPLOYEE_ID,date,start},
+            timestamp:Date.now()
+          })
+        }).catch(()=>{});
+        // #endregion
       }
 
       slots.sort((a, b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
@@ -120,6 +139,25 @@ export async function GET(request: NextRequest) {
               technicianId: emp.id,
               technicianName: emp.name,
             });
+
+            // #region agent log
+            fetch('http://127.0.0.1:7816/ingest/6871cd52-8abc-4996-a074-5937cf159ac7',{
+              method:'POST',
+              headers:{
+                'Content-Type':'application/json',
+                'X-Debug-Session-Id':'d0054e'
+              },
+              body:JSON.stringify({
+                sessionId:'d0054e',
+                runId:'availability',
+                hypothesisId:'H2',
+                location:'app/api/housecall/availability/route.ts:115',
+                message:'general availability slot',
+                data:{category,serviceZoneId,technicianId:emp.id,date,start},
+                timestamp:Date.now()
+              })
+            }).catch(()=>{});
+            // #endregion
           }
         }
       } catch {
