@@ -37,8 +37,22 @@ export async function POST() {
     const zones = serviceZonesRes.service_zones;
     const customers = customersRes.customers;
 
+    const employeeZoneMap = new Map<string, Set<string>>();
+    for (const z of zones as { id: string; service_pros?: { id?: string }[] }[]) {
+      if (!z?.id || !Array.isArray(z.service_pros)) continue;
+      for (const pro of z.service_pros) {
+        if (!pro?.id) continue;
+        if (!employeeZoneMap.has(pro.id)) {
+          employeeZoneMap.set(pro.id, new Set<string>());
+        }
+        employeeZoneMap.get(pro.id)!.add(z.id);
+      }
+    }
+
     for (const e of employees) {
-      const zoneIds = JSON.stringify(e.service_zone_ids ?? []);
+      const fromZones = Array.from(employeeZoneMap.get(e.id) ?? []);
+      const mergedIds = Array.from(new Set([...(e.service_zone_ids ?? []), ...fromZones]));
+      const zoneIds = JSON.stringify(mergedIds);
       await sql`
         INSERT INTO hcp_employees (id, first_name, last_name, name, service_zone_ids)
         VALUES (

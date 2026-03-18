@@ -31,9 +31,32 @@ async function fetchHCP<T>(path: string, options?: { method?: string; body?: unk
   return (text ? JSON.parse(text) : {}) as T;
 }
 
-type EmployeeRaw = { id: string; first_name?: string; last_name?: string; name?: string; service_zone_ids?: string[]; service_zone_id?: string; service_zones?: { id?: string }[] };
+type EmployeeRaw = {
+  id: string;
+  first_name?: string;
+  last_name?: string;
+  name?: string;
+  service_zone_ids?: string[];
+  service_zone_id?: string;
+  service_zones?: { id?: string }[];
+};
 type Employee = { id: string; first_name?: string; last_name?: string; name?: string; service_zone_ids: string[] };
-type ServiceZone = { id: string; name?: string; zip_codes?: string[] };
+type ServiceZone = {
+  id: string;
+  name?: string;
+  zip_codes?: string[];
+  coverage_type?: string;
+  trip_charge?: number;
+  fee_name?: string;
+  cities?: { city?: string; state?: string; country?: string }[];
+  service_pros?: {
+    id: string;
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    full_name?: string;
+  }[];
+};
 
 function normalizeEmployeeZoneIds(e: EmployeeRaw): string[] {
   if (Array.isArray(e.service_zone_ids) && e.service_zone_ids.length > 0) return e.service_zone_ids;
