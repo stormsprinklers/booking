@@ -68,7 +68,7 @@ function normalizeEmployeeZoneIds(e: EmployeeRaw): string[] {
   return [];
 }
 type Customer = { id: string; first_name?: string; last_name?: string; email?: string; phone?: string; address_line_1?: string; city?: string; state?: string; zip?: string };
-type BookingWindow = { start_time: string; end_time: string; employee_id?: string };
+type BookingWindow = { start_time: string; end_time?: string; employee_id?: string; available?: boolean };
 
 export async function getEmployees(): Promise<{ employees: Employee[] }> {
   const res = await fetchHCP<Record<string, unknown>>("/employees");

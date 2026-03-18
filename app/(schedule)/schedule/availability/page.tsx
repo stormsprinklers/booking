@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui";
 import { useBooking } from "@/contexts/BookingContext";
-import { getAvailableSlots } from "@/lib/booking/getAvailableSlots";
 import type { AvailabilitySlot } from "@/lib/types";
 import { track } from "@/lib/analytics";
 import { formatTechnicianDisplayName } from "@/lib/format/technicianName";
@@ -99,52 +98,12 @@ export default function ScheduleAvailabilityPage() {
         if (apiSlots.length > 0) {
           setSlots(apiSlots);
         } else {
-          const fallback = getAvailableSlots(serviceAreaId, serviceCategory);
-          if (serviceCategory === "upgrade") {
-            setSlots(
-              fallback.map((s) => ({
-                ...s,
-                technicianId: INSTALL_QUOTE_EMPLOYEE_ID,
-                technicianName: "Installation specialist",
-              }))
-            );
-          } else {
-            const fallbackTech = technicians[0];
-            setSlots(
-              fallbackTech
-                ? fallback.map((s) => ({
-                    ...s,
-                    technicianId: fallbackTech.id,
-                    technicianName: fallbackTech.name,
-                  }))
-                : fallback
-            );
-          }
+          setSlots([]);
         }
       })
       .catch(() => {
         if (!cancelled) {
-          const fallback = getAvailableSlots(serviceAreaId, serviceCategory);
-          if (serviceCategory === "upgrade") {
-            setSlots(
-              fallback.map((s) => ({
-                ...s,
-                technicianId: INSTALL_QUOTE_EMPLOYEE_ID,
-                technicianName: "Installation specialist",
-              }))
-            );
-          } else {
-            const fallbackTech = technicians[0];
-            setSlots(
-              fallbackTech
-                ? fallback.map((s) => ({
-                    ...s,
-                    technicianId: fallbackTech.id,
-                    technicianName: fallbackTech.name,
-                  }))
-                : fallback
-            );
-          }
+          setSlots([]);
         }
       })
       .finally(() => {
@@ -153,7 +112,7 @@ export default function ScheduleAvailabilityPage() {
     return () => {
       cancelled = true;
     };
-  }, [serviceAreaId, serviceCategory, router, technicians]);
+  }, [serviceAreaId, serviceCategory, router]);
 
   const handleSelect = (slot: AvailabilitySlot) => {
     setSelected(slot);

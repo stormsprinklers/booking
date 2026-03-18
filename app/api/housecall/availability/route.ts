@@ -55,7 +55,11 @@ export async function GET(request: NextRequest) {
       const seen = new Set<string>();
 
       for (const w of booking_windows) {
-        const endIso = w.end_time || new Date(new Date(w.start_time).getTime() + 2 * 60 * 60 * 1000).toISOString();
+        if (typeof w.available === "boolean" && !w.available) continue;
+        // Housecall Pro defaults to 30 minute windows when duration isn't specified.
+        const endIso =
+          w.end_time ||
+          new Date(new Date(w.start_time).getTime() + 30 * 60 * 1000).toISOString();
         const { date, start, end, label } = formatWindow(w.start_time, endIso);
         const d = new Date(`${date}T12:00:00`);
         const dow = d.getDay();
@@ -102,7 +106,11 @@ export async function GET(request: NextRequest) {
       try {
         const { booking_windows } = await hcp.getBookingWindows(emp.id);
         for (const w of booking_windows) {
-          const endIso = w.end_time || new Date(new Date(w.start_time).getTime() + 2 * 60 * 60 * 1000).toISOString();
+          if (typeof w.available === "boolean" && !w.available) continue;
+          // Housecall Pro defaults to 30 minute windows when duration isn't specified.
+          const endIso =
+            w.end_time ||
+            new Date(new Date(w.start_time).getTime() + 30 * 60 * 1000).toISOString();
           const { date, start, end, label } = formatWindow(w.start_time, endIso);
           const d = new Date(`${date}T12:00:00`);
           const dow = d.getDay();
