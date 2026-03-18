@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useBooking } from "@/contexts/BookingContext";
 import { Button, Card } from "@/components/ui";
+import { getTechnicianPhotoUrl } from "@/lib/config/technicianPhotos";
+import { formatTechnicianDisplayName } from "@/lib/format/technicianName";
 
 function formatDayLabel(dateStr: string): string {
   const d = new Date(dateStr + "T12:00:00");
@@ -65,6 +67,23 @@ export default function ScheduleSuccessPage() {
               {pricingOption.priceRange && `–$${pricingOption.priceRange.max}`}
             </p>
           </div>
+          {slot.technicianId && (
+            <div className="flex items-center gap-3 pt-2">
+              {getTechnicianPhotoUrl(slot.technicianId) && (
+                <img
+                  src={getTechnicianPhotoUrl(slot.technicianId)!}
+                  alt={slot.technicianName ?? "Technician"}
+                  className="h-12 w-12 rounded-full object-cover"
+                />
+              )}
+              <div>
+                <p className="text-sm font-medium text-[#102341]/60">Your technician</p>
+                <p className="text-[#102341]">
+                  {formatTechnicianDisplayName(slot.technicianName)}
+                </p>
+              </div>
+            </div>
+          )}
         </Card>
 
         <div className="mt-10 rounded-xl bg-[#C2E4F0]/30 p-6">

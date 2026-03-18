@@ -7,6 +7,7 @@ import { useBooking } from "@/contexts/BookingContext";
 import { getAvailableSlots } from "@/lib/booking/getAvailableSlots";
 import type { AvailabilitySlot } from "@/lib/types";
 import { track } from "@/lib/analytics";
+import { formatTechnicianDisplayName } from "@/lib/format/technicianName";
 
 function formatDayLabel(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
@@ -127,15 +128,22 @@ export default function ScheduleAvailabilityPage() {
             <p className="text-sm font-medium text-[#102341]/80">Technicians available in your area</p>
             <div className="mt-3 flex flex-wrap gap-3">
               {technicians.map((t) => (
-                <div key={t.id} className="flex items-center gap-2">
+                <div key={t.id} className="flex items-center gap-3">
                   {t.photoUrl && (
                     <img
                       src={t.photoUrl}
-                      alt={t.name}
+                      alt={formatTechnicianDisplayName(t.name)}
                       className="h-10 w-10 rounded-full object-cover"
                     />
                   )}
-                  <span className="text-sm text-[#102341]">{t.name}</span>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-[#102341]">
+                      {formatTechnicianDisplayName(t.name)}
+                    </span>
+                    <span className="text-xs text-[#102341]/80">
+                      Hi! I&apos;m {t.name.split(" ")[0]}, and I&apos;m excited to meet you and help you with your sprinkler system!
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -162,7 +170,9 @@ export default function ScheduleAvailabilityPage() {
                   >
                     <span className="block">{slot.label}</span>
                     {slot.technicianName && (
-                      <span className="mt-1 block text-xs text-[#102341]/70">{slot.technicianName}</span>
+                      <span className="mt-1 block text-xs text-[#102341]/70">
+                        {formatTechnicianDisplayName(slot.technicianName)}
+                      </span>
                     )}
                     {slot.spotsLeft && slot.spotsLeft <= 2 && (
                       <span className="mt-1 block text-xs text-[#F17388]">

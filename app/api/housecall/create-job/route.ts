@@ -73,6 +73,10 @@ export async function POST(request: NextRequest) {
           last_name: nameParts.slice(1).join(" ") ?? "",
           email: customer.email ?? undefined,
           phone: customer.phone ?? undefined,
+          address_line_1: addressLine1 || address || undefined,
+          city: city || undefined,
+          state: state || undefined,
+          zip: zip || undefined,
         });
         customerId = id;
       }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button, Card } from "@/components/ui";
 import { useBooking } from "@/contexts/BookingContext";
 import { track } from "@/lib/analytics";
+import { formatTechnicianDisplayName } from "@/lib/format/technicianName";
 
 function formatDayLabel(dateStr: string): string {
   const d = new Date(dateStr + "T12:00:00");
@@ -117,7 +118,9 @@ export default function ScheduleConfirmPage() {
           {slot.technicianName && (
             <div>
               <p className="text-sm font-medium text-[#102341]/60">Technician</p>
-              <p className="text-[#102341]">{slot.technicianName}</p>
+              <p className="text-[#102341]">
+                {formatTechnicianDisplayName(slot.technicianName)}
+              </p>
             </div>
           )}
           <div>
