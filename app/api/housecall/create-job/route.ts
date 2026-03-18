@@ -147,7 +147,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ ok: true, jobId });
+    const debug = {
+      customerId,
+      employeeId,
+      schedule: payload.schedule,
+    };
+
+    return NextResponse.json({ ok: true, jobId, debug });
   } catch (err) {
     console.error("Create job error:", err);
     return NextResponse.json(

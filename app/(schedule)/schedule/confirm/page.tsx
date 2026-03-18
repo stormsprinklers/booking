@@ -23,6 +23,7 @@ export default function ScheduleConfirmPage() {
   const { pricingOption, slot, address, customer, serviceCategory } = useBooking();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<unknown | null>(null);
 
   useEffect(() => {
     if (!slot) router.push("/schedule/availability");
@@ -65,6 +66,7 @@ export default function ScheduleConfirmPage() {
         }),
       });
       const data = await res.json();
+      setDebugInfo(data.debug ?? null);
       if (!res.ok) throw new Error(data.error ?? "Failed to create job");
       track("booking_completed", { service: pricingOption.title, slotId: slot.id, jobId: data.jobId });
       router.push("/schedule/success");
@@ -150,6 +152,17 @@ export default function ScheduleConfirmPage() {
         >
           {submitting ? "Creating job…" : "Confirm booking"}
         </Button>
+
+        {debugInfo && (
+          <div className="mt-6 rounded-xl bg-[#F0F0F0] p-4">
+            <p className="mb-2 text-sm font-medium text-[#102341]/70">
+              Debug (Housecall payload summary)
+            </p>
+            <pre className="max-h-64 overflow-auto text-xs text-[#102341]/80">
+              {JSON.stringify(debugInfo, null, 2)}
+            </pre>
+          </div>
+        )}
       </div>
     </div>
   );
