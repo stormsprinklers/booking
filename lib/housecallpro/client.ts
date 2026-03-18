@@ -125,7 +125,9 @@ export async function getBookingWindows(
 ): Promise<{ booking_windows: BookingWindow[] }> {
   const serviceDurationMinutes = options?.serviceDurationMinutes;
   const qs = new URLSearchParams({
-    employee_id: employeeId,
+    // Housecall Pro docs use `employee_ids` (array[string]) for this endpoint.
+    // We pass a single employee id as `employee_ids`.
+    employee_ids: employeeId,
     ...(serviceDurationMinutes && serviceDurationMinutes > 0 ? { service_duration: String(serviceDurationMinutes) } : {}),
   });
   const res = await fetchHCP<Record<string, unknown>>(`/booking_windows?${qs.toString()}`);
