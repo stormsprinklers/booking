@@ -166,10 +166,6 @@ export async function createJob(payload: CreateJobPayload): Promise<{ job?: { id
   return res as { job?: { id: string } };
 }
 
-export async function getJob(jobId: string): Promise<Record<string, unknown>> {
-  return await fetchHCP<Record<string, unknown>>(`/jobs/${encodeURIComponent(jobId)}`);
-}
-
 export async function addJobNote(jobId: string, content: string): Promise<void> {
   await fetchHCP<unknown>(`/jobs/${encodeURIComponent(jobId)}/notes`, {
     method: "POST",
@@ -188,40 +184,7 @@ export async function updateJobSchedule(
   });
 }
 
-export async function updateJobAssignedEmployees(jobId: string, employeeIds: string[]): Promise<void> {
-  await fetchHCP<unknown>(`/jobs/${encodeURIComponent(jobId)}`, {
-    method: "PATCH",
-    body: { assigned_employee_ids: employeeIds },
-  });
-}
-
-export async function updateJobScheduleAssignedEmployees(jobId: string, employeeIds: string[]): Promise<void> {
-  await fetchHCP<unknown>(`/jobs/${encodeURIComponent(jobId)}`, {
-    method: "PATCH",
-    body: { schedule: { assigned_employee_ids: employeeIds } },
-  });
-}
-
 export async function dispatchJobToEmployee(jobId: string, employeeId: string): Promise<void> {
-  // #region agent log
-  fetch('http://127.0.0.1:7816/ingest/6871cd52-8abc-4996-a074-5937cf159ac7',{
-    method:'POST',
-    headers:{
-      'Content-Type':'application/json',
-      'X-Debug-Session-Id':'d0054e'
-    },
-    body:JSON.stringify({
-      sessionId:'d0054e',
-      runId:'dispatch',
-      hypothesisId:'H4',
-      location:'lib/housecallpro/client.ts:182',
-      message:'dispatchJobToEmployee call',
-      data:{jobId,employeeId},
-      timestamp:Date.now()
-    })
-  }).catch(()=>{});
-  // #endregion
-
   await fetchHCP<unknown>(`/jobs/${encodeURIComponent(jobId)}/dispatch`, {
     method: "PUT",
     body: { employee_ids: [employeeId] },

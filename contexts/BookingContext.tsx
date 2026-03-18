@@ -21,7 +21,6 @@ interface BookingState {
   serviceAreaId: string | null;
   slot: AvailabilitySlot | null;
   customer: Partial<Customer>;
-  lastCreateJobDebug: Record<string, unknown> | null;
 }
 
 interface BookingContextValue extends BookingState {
@@ -32,7 +31,6 @@ interface BookingContextValue extends BookingState {
   setSlot: (s: AvailabilitySlot | null) => void;
   setCustomer: (c: Partial<Customer>) => void;
   updateCustomer: (updates: Partial<Customer>) => void;
-  setLastCreateJobDebug: (debug: Record<string, unknown> | null) => void;
   reset: () => void;
 }
 
@@ -43,7 +41,6 @@ const initialState: BookingState = {
   serviceAreaId: null,
   slot: null,
   customer: {},
-  lastCreateJobDebug: null,
 };
 
 const BookingContext = createContext<BookingContextValue | null>(null);
@@ -79,10 +76,6 @@ export function BookingProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, customer: { ...s.customer, ...updates } }));
   }, []);
 
-  const setLastCreateJobDebug = useCallback((lastCreateJobDebug: Record<string, unknown> | null) => {
-    setState((s) => ({ ...s, lastCreateJobDebug }));
-  }, []);
-
   const reset = useCallback(() => {
     setState(initialState);
   }, []);
@@ -98,7 +91,6 @@ export function BookingProvider({ children }: { children: ReactNode }) {
         setSlot,
         setCustomer,
         updateCustomer,
-        setLastCreateJobDebug,
         reset,
       }}
     >

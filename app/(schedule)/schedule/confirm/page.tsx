@@ -21,10 +21,9 @@ function toISO(slot: { date: string; startTime: string; endTime: string }): { st
 
 export default function ScheduleConfirmPage() {
   const router = useRouter();
-  const { pricingOption, slot, address, customer, serviceCategory, setLastCreateJobDebug } = useBooking();
+  const { pricingOption, slot, address, customer, serviceCategory } = useBooking();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [debugInfo, setDebugInfo] = useState<any | null>(null);
 
   useEffect(() => {
     if (!slot) router.push("/schedule/availability");
@@ -51,21 +50,6 @@ export default function ScheduleConfirmPage() {
       const { start, end } = toISO(slot);
       const effectiveEmployeeId =
         slot.technicianId ?? (serviceCategory === "upgrade" ? INSTALL_QUOTE_EMPLOYEE_ID : undefined);
-      // #region agent log
-      fetch("http://127.0.0.1:7816/ingest/6871cd52-8abc-4996-a074-5937cf159ac7", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "d0054e" },
-        body: JSON.stringify({
-          sessionId: "d0054e",
-          runId: "confirm-submit",
-          hypothesisId: "H-confirm",
-          location: "app/(schedule)/schedule/confirm/page.tsx:handleConfirm",
-          message: "payload employeeId",
-          data: { slotTechnicianId: slot.technicianId, serviceCategory, effectiveEmployeeId },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
       const res = await fetch("/api/housecall/create-job", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -84,10 +68,7 @@ export default function ScheduleConfirmPage() {
         }),
       });
       const data = await res.json();
-      const debug = data.debug ?? null;
-      setDebugInfo(debug);
       if (!res.ok) throw new Error(data.error ?? "Failed to create job");
-      setLastCreateJobDebug(debug && typeof debug === "object" ? (debug as Record<string, unknown>) : null);
       track("booking_completed", { service: pricingOption.title, slotId: slot.id, jobId: data.jobId });
       router.push("/schedule/success");
     } catch (e) {
@@ -172,17 +153,6 @@ export default function ScheduleConfirmPage() {
         >
           {submitting ? "Creating job…" : "Confirm booking"}
         </Button>
-
-        {debugInfo && (
-          <div className="mt-6 rounded-xl bg-[#F0F0F0] p-4">
-            <p className="mb-2 text-sm font-medium text-[#102341]/70">
-              Debug (Housecall payload summary)
-            </p>
-            <pre className="max-h-64 overflow-auto text-xs text-[#102341]/80">
-              {JSON.stringify(debugInfo, null, 2)}
-            </pre>
-          </div>
-        )}
       </div>
     </div>
   );

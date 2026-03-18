@@ -115,55 +115,9 @@ export async function POST(request: NextRequest) {
       payload.notes = jobNotes.trim();
     }
 
-    // #region agent log
-    fetch('http://127.0.0.1:7816/ingest/6871cd52-8abc-4996-a074-5937cf159ac7',{
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'X-Debug-Session-Id':'d0054e'
-      },
-      body:JSON.stringify({
-        sessionId:'d0054e',
-        runId:'create-job',
-        hypothesisId:'H3',
-        location:'app/api/housecall/create-job/route.ts:113',
-        message:'createJob payload before send',
-        data:{
-          customerId,
-          employeeId,
-          scheduled_start:payload.schedule?.scheduled_start,
-          scheduled_end:payload.schedule?.scheduled_end,
-          assigned_employee_ids:payload.schedule?.assigned_employee_ids
-        },
-        timestamp:Date.now()
-      })
-    }).catch(()=>{});
-    // #endregion
-
     const res = await hcp.createJob(payload);
     const jobId = (res.job as { id?: string })?.id ?? (res as { id?: string }).id;
     if (!jobId) throw new Error("Create job did not return job ID");
-
-    const pickJobAssignmentFields = (raw: Record<string, unknown> | null | undefined) => {
-      if (!raw || typeof raw !== "object") return null;
-      const job = (raw as { job?: Record<string, unknown> }).job ?? (raw as Record<string, unknown>);
-      const schedule = (job as { schedule?: Record<string, unknown> }).schedule;
-      return {
-        id: (job as { id?: unknown }).id ?? null,
-        schedule: schedule
-          ? {
-              scheduled_start: (schedule as { scheduled_start?: unknown }).scheduled_start ?? null,
-              scheduled_end: (schedule as { scheduled_end?: unknown }).scheduled_end ?? null,
-              assigned_employee_ids: (schedule as { assigned_employee_ids?: unknown }).assigned_employee_ids ?? null,
-              employee_ids: (schedule as { employee_ids?: unknown }).employee_ids ?? null,
-            }
-          : null,
-        assigned_employee_ids: (job as { assigned_employee_ids?: unknown }).assigned_employee_ids ?? null,
-        assigned_employees: (job as { assigned_employees?: unknown }).assigned_employees ?? null,
-      };
-    };
-
-    const hcpAfterCreate = pickJobAssignmentFields(res as unknown as Record<string, unknown>);
 
     if (employeeId) {
       try {
@@ -172,57 +126,7 @@ export async function POST(request: NextRequest) {
         console.warn("Dispatch job to employee failed:", err);
       }
     }
-
-    const patchAttempts: {
-      updateJobAssignedEmployees?: "ok" | "error";
-      updateJobScheduleAssignedEmployees?: "ok" | "error";
-      errors?: string[];
-    } = { errors: [] };
-
-    if (employeeId) {
-      try {
-        await hcp.updateJobAssignedEmployees(jobId, [employeeId]);
-        patchAttempts.updateJobAssignedEmployees = "ok";
-      } catch (err) {
-        patchAttempts.updateJobAssignedEmployees = "error";
-        patchAttempts.errors?.push(
-          `updateJobAssignedEmployees: ${err instanceof Error ? err.message : String(err)}`
-        );
-      }
-      try {
-        await hcp.updateJobScheduleAssignedEmployees(jobId, [employeeId]);
-        patchAttempts.updateJobScheduleAssignedEmployees = "ok";
-      } catch (err) {
-        patchAttempts.updateJobScheduleAssignedEmployees = "error";
-        patchAttempts.errors?.push(
-          `updateJobScheduleAssignedEmployees: ${err instanceof Error ? err.message : String(err)}`
-        );
-      }
-    }
-
-    let hcpAfterDispatch: ReturnType<typeof pickJobAssignmentFields> = null;
-    if (employeeId) {
-      try {
-        const after = await hcp.getJob(jobId);
-        hcpAfterDispatch = pickJobAssignmentFields(after);
-      } catch (err) {
-        console.warn("Get job after dispatch failed:", err);
-      }
-    }
-
-    const debug = {
-      customerId,
-      employeeId: employeeId ?? null,
-      schedule: payload.schedule,
-      assigned_employee_ids: payload.assigned_employee_ids ?? null,
-      scheduled_start: payload.scheduled_start ?? null,
-      scheduled_end: payload.scheduled_end ?? null,
-      hcpAfterCreate,
-      hcpAfterDispatch,
-      patchAttempts,
-    };
-
-    return NextResponse.json({ ok: true, jobId, debug });
+    return NextResponse.json({ ok: true, jobId });
   } catch (err) {
     console.error("Create job error:", err);
     return NextResponse.json(
