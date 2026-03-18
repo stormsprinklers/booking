@@ -161,6 +161,10 @@ export async function createJob(payload: CreateJobPayload): Promise<{ job?: { id
   return res as { job?: { id: string } };
 }
 
+export async function getJob(jobId: string): Promise<Record<string, unknown>> {
+  return await fetchHCP<Record<string, unknown>>(`/jobs/${encodeURIComponent(jobId)}`);
+}
+
 export async function addJobNote(jobId: string, content: string): Promise<void> {
   await fetchHCP<unknown>(`/jobs/${encodeURIComponent(jobId)}/notes`, {
     method: "POST",

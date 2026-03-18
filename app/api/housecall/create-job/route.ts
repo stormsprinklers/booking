@@ -139,6 +139,27 @@ export async function POST(request: NextRequest) {
     const jobId = (res.job as { id?: string })?.id ?? (res as { id?: string }).id;
     if (!jobId) throw new Error("Create job did not return job ID");
 
+    const pickJobAssignmentFields = (raw: Record<string, unknown> | null | undefined) => {
+      if (!raw || typeof raw !== "object") return null;
+      const job = (raw as { job?: Record<string, unknown> }).job ?? (raw as Record<string, unknown>);
+      const schedule = (job as { schedule?: Record<string, unknown> }).schedule;
+      return {
+        id: (job as { id?: unknown }).id ?? null,
+        schedule: schedule
+          ? {
+              scheduled_start: (schedule as { scheduled_start?: unknown }).scheduled_start ?? null,
+              scheduled_end: (schedule as { scheduled_end?: unknown }).scheduled_end ?? null,
+              assigned_employee_ids: (schedule as { assigned_employee_ids?: unknown }).assigned_employee_ids ?? null,
+              employee_ids: (schedule as { employee_ids?: unknown }).employee_ids ?? null,
+            }
+          : null,
+        assigned_employee_ids: (job as { assigned_employee_ids?: unknown }).assigned_employee_ids ?? null,
+        assigned_employees: (job as { assigned_employees?: unknown }).assigned_employees ?? null,
+      };
+    };
+
+    const hcpAfterCreate = pickJobAssignmentFields(res as unknown as Record<string, unknown>);
+
     if (employeeId) {
       try {
         await hcp.dispatchJobToEmployee(jobId, employeeId);
@@ -147,10 +168,22 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    let hcpAfterDispatch: ReturnType<typeof pickJobAssignmentFields> = null;
+    if (employeeId) {
+      try {
+        const after = await hcp.getJob(jobId);
+        hcpAfterDispatch = pickJobAssignmentFields(after);
+      } catch (err) {
+        console.warn("Get job after dispatch failed:", err);
+      }
+    }
+
     const debug = {
       customerId,
       employeeId: employeeId ?? null,
       schedule: payload.schedule,
+      hcpAfterCreate,
+      hcpAfterDispatch,
     };
 
     return NextResponse.json({ ok: true, jobId, debug });
