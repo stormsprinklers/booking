@@ -130,7 +130,11 @@ export async function getBookingWindows(
     employee_ids: employeeId,
     ...(serviceDurationMinutes && serviceDurationMinutes > 0 ? { service_duration: String(serviceDurationMinutes) } : {}),
   });
-  const res = await fetchHCP<Record<string, unknown>>(`/booking_windows?${qs.toString()}`);
+  // Docs:
+  // https://api.housecallpro.com/company/schedule_availability/booking_windows
+  const res = await fetchHCP<Record<string, unknown>>(
+    `/company/schedule_availability/booking_windows?${qs.toString()}`
+  );
   const windows = (res.booking_windows ?? res.data ?? res.items ?? []) as BookingWindow[];
   return { booking_windows: Array.isArray(windows) ? windows : [] };
 }
