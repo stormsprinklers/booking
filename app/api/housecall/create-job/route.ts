@@ -114,6 +114,14 @@ export async function POST(request: NextRequest) {
     const jobId = (res.job as { id?: string })?.id ?? (res as { id?: string }).id;
     if (!jobId) throw new Error("Create job did not return job ID");
 
+    if (employeeId) {
+      try {
+        await hcp.dispatchJobToEmployee(jobId, employeeId);
+      } catch (err) {
+        console.warn("Dispatch job to employee failed:", err);
+      }
+    }
+
     return NextResponse.json({ ok: true, jobId });
   } catch (err) {
     console.error("Create job error:", err);

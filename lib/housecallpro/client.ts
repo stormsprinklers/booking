@@ -180,8 +180,8 @@ export async function updateJobSchedule(
 }
 
 export async function dispatchJobToEmployee(jobId: string, employeeId: string): Promise<void> {
-  await fetchHCP<unknown>(`/jobs/${encodeURIComponent(jobId)}`, {
-    method: "PATCH",
-    body: { assigned_to: employeeId },
+  await fetchHCP<unknown>(`/jobs/${encodeURIComponent(jobId)}/dispatch`, {
+    method: "PUT",
+    body: { employee_ids: [employeeId] },
   });
 }
