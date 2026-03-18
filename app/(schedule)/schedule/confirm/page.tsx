@@ -50,6 +50,11 @@ export default function ScheduleConfirmPage() {
       const { start, end } = toISO(slot);
       const effectiveEmployeeId =
         slot.technicianId ?? (serviceCategory === "upgrade" ? INSTALL_QUOTE_EMPLOYEE_ID : undefined);
+      if (serviceCategory !== "upgrade" && !effectiveEmployeeId) {
+        setError("No technician is available for this time. Please choose another slot.");
+        setSubmitting(false);
+        return;
+      }
       const res = await fetch("/api/housecall/create-job", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

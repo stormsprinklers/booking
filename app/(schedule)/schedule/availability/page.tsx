@@ -109,7 +109,16 @@ export default function ScheduleAvailabilityPage() {
               }))
             );
           } else {
-            setSlots(fallback);
+            const fallbackTech = technicians[0];
+            setSlots(
+              fallbackTech
+                ? fallback.map((s) => ({
+                    ...s,
+                    technicianId: fallbackTech.id,
+                    technicianName: fallbackTech.name,
+                  }))
+                : fallback
+            );
           }
         }
       })
@@ -125,7 +134,16 @@ export default function ScheduleAvailabilityPage() {
               }))
             );
           } else {
-            setSlots(fallback);
+            const fallbackTech = technicians[0];
+            setSlots(
+              fallbackTech
+                ? fallback.map((s) => ({
+                    ...s,
+                    technicianId: fallbackTech.id,
+                    technicianName: fallbackTech.name,
+                  }))
+                : fallback
+            );
           }
         }
       })
@@ -135,7 +153,7 @@ export default function ScheduleAvailabilityPage() {
     return () => {
       cancelled = true;
     };
-  }, [serviceAreaId, serviceCategory, router]);
+  }, [serviceAreaId, serviceCategory, router, technicians]);
 
   const handleSelect = (slot: AvailabilitySlot) => {
     setSelected(slot);
