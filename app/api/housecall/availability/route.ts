@@ -49,17 +49,16 @@ export async function GET(request: NextRequest) {
       const empRow = (Array.isArray(rows) ? rows[0] : null) as { id: string; name: string } | null;
       const installerName = empRow?.name ?? "Installer";
 
-      const { booking_windows } = await hcp.getBookingWindows(INSTALL_QUOTE_EMPLOYEE_ID);
+      const { booking_windows } = await hcp.getBookingWindows(INSTALL_QUOTE_EMPLOYEE_ID, { serviceDurationMinutes: 120 });
 
       const slots: { id: string; date: string; startTime: string; endTime: string; label: string; technicianId?: string; technicianName?: string }[] = [];
       const seen = new Set<string>();
 
       for (const w of booking_windows) {
-        if (typeof w.available === "boolean" && !w.available) continue;
-        // Housecall Pro defaults to 30 minute windows when duration isn't specified.
+        // If end_time is missing, assume a 2-hour planned job duration.
         const endIso =
           w.end_time ||
-          new Date(new Date(w.start_time).getTime() + 30 * 60 * 1000).toISOString();
+          new Date(new Date(w.start_time).getTime() + 2 * 60 * 60 * 1000).toISOString();
         const { date, start, end, label } = formatWindow(w.start_time, endIso);
         const d = new Date(`${date}T12:00:00`);
         const dow = d.getDay();
@@ -104,13 +103,12 @@ export async function GET(request: NextRequest) {
 
     for (const emp of employees) {
       try {
-        const { booking_windows } = await hcp.getBookingWindows(emp.id);
+        const { booking_windows } = await hcp.getBookingWindows(emp.id, { serviceDurationMinutes: 120 });
         for (const w of booking_windows) {
-          if (typeof w.available === "boolean" && !w.available) continue;
-          // Housecall Pro defaults to 30 minute windows when duration isn't specified.
+          // If end_time is missing, assume a 2-hour planned job duration.
           const endIso =
             w.end_time ||
-            new Date(new Date(w.start_time).getTime() + 30 * 60 * 1000).toISOString();
+            new Date(new Date(w.start_time).getTime() + 2 * 60 * 60 * 1000).toISOString();
           const { date, start, end, label } = formatWindow(w.start_time, endIso);
           const d = new Date(`${date}T12:00:00`);
           const dow = d.getDay();

@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const res = await hcp.getBookingWindows(employeeId);
+    const res = await hcp.getBookingWindows(employeeId, { serviceDurationMinutes: 120 });
     const windows = Array.isArray(res.booking_windows) ? res.booking_windows : res.booking_windows ?? [];
 
     return NextResponse.json({ bookingWindows: windows });

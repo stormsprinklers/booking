@@ -119,10 +119,16 @@ export async function createCustomer(payload: CreateCustomerPayload): Promise<{ 
   return { id };
 }
 
-export async function getBookingWindows(employeeId: string): Promise<{ booking_windows: BookingWindow[] }> {
-  const res = await fetchHCP<Record<string, unknown>>(
-    `/booking_windows?employee_id=${encodeURIComponent(employeeId)}`
-  );
+export async function getBookingWindows(
+  employeeId: string,
+  options?: { serviceDurationMinutes?: number }
+): Promise<{ booking_windows: BookingWindow[] }> {
+  const serviceDurationMinutes = options?.serviceDurationMinutes;
+  const qs = new URLSearchParams({
+    employee_id: employeeId,
+    ...(serviceDurationMinutes && serviceDurationMinutes > 0 ? { service_duration: String(serviceDurationMinutes) } : {}),
+  });
+  const res = await fetchHCP<Record<string, unknown>>(`/booking_windows?${qs.toString()}`);
   const windows = (res.booking_windows ?? res.data ?? res.items ?? []) as BookingWindow[];
   return { booking_windows: Array.isArray(windows) ? windows : [] };
 }
