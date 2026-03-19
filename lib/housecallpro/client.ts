@@ -160,20 +160,20 @@ export async function getScheduleWindows(
   // Docs (per HCP): Schedule Windows
   // https://docs.housecallpro.com/docs/housecall-public-api/898190c92fb8b-schedule-windows
   //
-  // The docs site has been timing out for us, and HCP has multiple "schedule availability" namespaces.
-  // We probe likely paths and surface which one worked in debug.
-  const candidates = [
-    `/company/schedule_availability/schedule_windows?${qs.toString()}`,
-    `/company/schedule_availability/schedule_windows_v2?${qs.toString()}`,
-    `/company/schedule_windows?${qs.toString()}`,
-    `/schedule_windows?${qs.toString()}`,
-  ];
+  // HCP serves schedule availability at `/company/schedule_availability` and includes `schedule_windows`
+  // (and sometimes other window arrays) in the response.
+  const candidates = [`/company/schedule_availability?${qs.toString()}`];
 
   const tried: { path: string; ok: boolean; error?: string }[] = [];
   for (const path of candidates) {
     try {
       const res = await fetchHCP<Record<string, unknown>>(path);
-      const windows = (res.schedule_windows ?? res.scheduleWindows ?? res.data ?? res.items ?? []) as ScheduleWindow[];
+      const windows = (res.schedule_windows ??
+        res.scheduleWindows ??
+        (res as { schedule_availability?: { schedule_windows?: unknown } }).schedule_availability?.schedule_windows ??
+        res.data ??
+        res.items ??
+        []) as ScheduleWindow[];
       tried.push({ path, ok: true });
       return { schedule_windows: Array.isArray(windows) ? windows : [], debug: { tried } };
     } catch (err) {
