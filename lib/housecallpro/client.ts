@@ -161,16 +161,32 @@ export async function getScheduleWindows(
 
   // Schedule Windows:
   // https://api.housecallpro.com/company/schedule_availability
-  // Response includes `schedule_windows`.
+  // Response shape: { daily_availabilities: { data: [ { day_name, schedule_windows: [{ start_time, end_time }] } ] } }
   const res = await fetchHCP<Record<string, unknown>>(`/company/schedule_availability?${qs.toString()}`);
-  const windows = (res.schedule_windows ??
-    (res as { schedule_availability?: { schedule_windows?: unknown } }).schedule_availability?.schedule_windows ??
-    res.scheduleWindows ??
-    res.data ??
-    res.items ??
-    []) as ScheduleWindow[];
 
-  return { schedule_windows: Array.isArray(windows) ? windows : [] };
+  const dailyAvail = res.daily_availabilities ?? (res as { dailyAvailabilities?: unknown }).dailyAvailabilities;
+  const dayData = (dailyAvail as { data?: unknown[] })?.data;
+  const windows: ScheduleWindow[] = [];
+
+  if (Array.isArray(dayData)) {
+    for (const day of dayData) {
+      const sw = (day as { schedule_windows?: unknown[] }).schedule_windows ??
+        (day as { scheduleWindows?: unknown[] }).scheduleWindows;
+      if (Array.isArray(sw)) {
+        for (const w of sw) {
+          const win = w as { start_time?: string; end_time?: string };
+          if (win?.start_time) {
+            windows.push({
+              start_time: win.start_time,
+              end_time: win.end_time ?? undefined,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  return { schedule_windows: windows };
 }
 
 export interface CreateJobPayload {
