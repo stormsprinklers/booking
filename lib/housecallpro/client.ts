@@ -69,7 +69,6 @@ function normalizeEmployeeZoneIds(e: EmployeeRaw): string[] {
 }
 type Customer = { id: string; first_name?: string; last_name?: string; email?: string; phone?: string; address_line_1?: string; city?: string; state?: string; zip?: string };
 type BookingWindow = { start_time: string; end_time?: string; employee_id?: string; available?: boolean };
-type ScheduleWindow = { start_time: string; end_time?: string; employee_id?: string; available?: boolean };
 
 export async function getEmployees(): Promise<{ employees: Employee[] }> {
   const res = await fetchHCP<Record<string, unknown>>("/employees");
@@ -142,47 +141,6 @@ export async function getBookingWindows(
   );
   const windows = (res.booking_windows ?? res.data ?? res.items ?? []) as BookingWindow[];
   return { booking_windows: Array.isArray(windows) ? windows : [] };
-}
-
-export async function getScheduleWindows(
-  employeeId: string,
-  options?: { serviceDurationMinutes?: number; showForDays?: number; startDate?: string }
-): Promise<{ schedule_windows: ScheduleWindow[]; debug?: { tried: { path: string; ok: boolean; error?: string }[] } }> {
-  const serviceDurationMinutes = options?.serviceDurationMinutes;
-  const showForDays = options?.showForDays;
-  const startDate = options?.startDate;
-  const qs = new URLSearchParams({
-    employee_ids: employeeId,
-    ...(serviceDurationMinutes && serviceDurationMinutes > 0 ? { service_duration: String(serviceDurationMinutes) } : {}),
-    ...(showForDays && showForDays > 0 ? { show_for_days: String(showForDays) } : {}),
-    ...(startDate ? { start_date: startDate } : {}),
-  });
-  // Docs (per HCP): Schedule Windows
-  // https://docs.housecallpro.com/docs/housecall-public-api/898190c92fb8b-schedule-windows
-  //
-  // HCP serves schedule availability at `/company/schedule_availability` and includes `schedule_windows`
-  // (and sometimes other window arrays) in the response.
-  const candidates = [`/company/schedule_availability?${qs.toString()}`];
-
-  const tried: { path: string; ok: boolean; error?: string }[] = [];
-  for (const path of candidates) {
-    try {
-      const res = await fetchHCP<Record<string, unknown>>(path);
-      const windows = (res.schedule_windows ??
-        res.scheduleWindows ??
-        (res as { schedule_availability?: { schedule_windows?: unknown } }).schedule_availability?.schedule_windows ??
-        res.data ??
-        res.items ??
-        []) as ScheduleWindow[];
-      tried.push({ path, ok: true });
-      return { schedule_windows: Array.isArray(windows) ? windows : [], debug: { tried } };
-    } catch (err) {
-      tried.push({ path, ok: false, error: err instanceof Error ? err.message.slice(0, 300) : String(err).slice(0, 300) });
-      continue;
-    }
-  }
-
-  return { schedule_windows: [], debug: { tried } };
 }
 
 export interface CreateJobPayload {

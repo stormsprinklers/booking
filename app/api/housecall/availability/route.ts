@@ -98,22 +98,6 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // #region agent log
-    fetch("http://127.0.0.1:7816/ingest/6871cd52-8abc-4996-a074-5937cf159ac7", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "d0054e" },
-      body: JSON.stringify({
-        sessionId: "d0054e",
-        runId: "availability-debug",
-        hypothesisId: "H-availability-0slots",
-        location: "app/api/housecall/availability/route.ts:24",
-        message: "availability route hit",
-        data: { serviceZoneId, category },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-
     if (!process.env.DATABASE_URL) {
       return NextResponse.json(
         { error: "DATABASE_URL not configured" },
@@ -138,56 +122,6 @@ export async function GET(request: NextRequest) {
         startDate,
       });
 
-      const debug =
-        // #region agent log
-        {
-          branch: "upgrade",
-          serviceZoneId,
-          serviceDurationMinutes: SERVICE_DURATION_MINUTES,
-          query: { employee_ids: INSTALL_QUOTE_EMPLOYEE_ID, service_duration: SERVICE_DURATION_MINUTES, show_for_days: 7, start_date: startDate },
-          bookingWindowsCount: booking_windows.length,
-          bookingWindowsFirst: booking_windows[0]
-            ? {
-                start_time: booking_windows[0].start_time,
-                end_time: booking_windows[0].end_time ?? null,
-                available: booking_windows[0].available ?? null,
-                localFormatted: (() => {
-                  const startIso = booking_windows[0].start_time;
-                  const endIso =
-                    booking_windows[0].end_time ||
-                    new Date(new Date(booking_windows[0].start_time).getTime() + 2 * 60 * 60 * 1000).toISOString();
-                  return formatWindow(startIso, endIso);
-                })(),
-              }
-            : null,
-        };
-      // #region agent log
-      fetch("http://127.0.0.1:7816/ingest/6871cd52-8abc-4996-a074-5937cf159ac7", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "d0054e" },
-        body: JSON.stringify({
-          sessionId: "d0054e",
-          runId: "availability-debug",
-          hypothesisId: "H-availability-0slots",
-          location: "app/api/housecall/availability/route.ts:56",
-          message: "install booking_windows result",
-          data: {
-            employeeId: INSTALL_QUOTE_EMPLOYEE_ID,
-            serviceDurationMinutes: 120,
-            bookingWindowsCount: booking_windows.length,
-            first: booking_windows[0]
-              ? {
-                  start_time: booking_windows[0].start_time,
-                  end_time: booking_windows[0].end_time ?? null,
-                  available: booking_windows[0].available ?? null,
-                }
-              : null,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
-
       const slots: { id: string; date: string; startTime: string; endTime: string; label: string; technicianId?: string; technicianName?: string }[] = [];
       const seen = new Set<string>();
 
@@ -195,7 +129,7 @@ export async function GET(request: NextRequest) {
         // If end_time is missing, assume a 2-hour planned job duration.
         const endIso =
           w.end_time ||
-          new Date(new Date(w.start_time).getTime() + 2 * 60 * 60 * 1000).toISOString();
+          new Date(new Date(w.start_time).getTime() + SERVICE_DURATION_MINUTES * 60 * 1000).toISOString();
         const { date, start, end, label } = formatWindow(w.start_time, endIso);
         const dow = getDenverDow(w.start_time);
         // No install quotes on weekends
@@ -219,22 +153,7 @@ export async function GET(request: NextRequest) {
       }
 
       slots.sort((a, b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
-      // #region agent log
-      fetch("http://127.0.0.1:7816/ingest/6871cd52-8abc-4996-a074-5937cf159ac7", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "d0054e" },
-        body: JSON.stringify({
-          sessionId: "d0054e",
-          runId: "availability-debug",
-          hypothesisId: "H-availability-0slots",
-          location: "app/api/housecall/availability/route.ts:85",
-          message: "install slots built",
-          data: { slotsCount: slots.length },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
-      return NextResponse.json({ slots, debug });
+      return NextResponse.json({ slots });
     }
 
     const rows = await sql`
@@ -251,22 +170,6 @@ export async function GET(request: NextRequest) {
 
     const slots: { id: string; date: string; startTime: string; endTime: string; label: string; technicianId?: string; technicianName?: string }[] = [];
     const seen = new Set<string>();
-    let loggedFirstEmployee = false;
-
-    const debug: Record<string, unknown> = {
-      branch: "repair",
-      serviceZoneId,
-      serviceDurationMinutes: SERVICE_DURATION_MINUTES,
-      query: null,
-      employeesConsidered: employees.length,
-      bookingWindowsFirstEmployeeId: null,
-      bookingWindowsFirstEmployeeBookingWindowsCount: null,
-      bookingWindowsFirst: null,
-        bookingWindowsFirstRaw: null,
-        scheduleWindowsFirstEmployeeScheduleWindowsCount: null,
-        scheduleWindowsFirstRaw: null,
-        errors: [] as { employeeId: string; message: string }[],
-    };
 
     for (const emp of employees) {
       try {
@@ -276,88 +179,11 @@ export async function GET(request: NextRequest) {
           showForDays: 7,
           startDate,
         });
-        let schedule_windows_len: number | null = null;
-        let schedule_windows_raw: unknown = null;
-        try {
-          const swRes = await hcp.getScheduleWindows(emp.id, {
-            serviceDurationMinutes: SERVICE_DURATION_MINUTES,
-            showForDays: 7,
-            startDate,
-          });
-          schedule_windows_len = swRes.schedule_windows.length;
-          schedule_windows_raw = {
-            tried: swRes.debug?.tried ?? null,
-            sample: swRes.schedule_windows.slice(0, 5).map((sw) => ({
-            start_time: sw.start_time,
-            end_time: sw.end_time ?? null,
-            available: (sw as { available?: unknown }).available ?? null,
-            employee_id: (sw as { employee_id?: unknown }).employee_id ?? null,
-            })),
-          };
-        } catch (swErr) {
-          const msg = swErr instanceof Error ? swErr.message : String(swErr);
-          schedule_windows_len = -1;
-          schedule_windows_raw = { error: msg.slice(0, 1200) };
-        }
-        if (!loggedFirstEmployee) {
-          loggedFirstEmployee = true;
-          debug.query = { employee_ids: emp.id, service_duration: SERVICE_DURATION_MINUTES, show_for_days: 7, start_date: startDate };
-          debug.bookingWindowsFirstEmployeeId = emp.id;
-          debug.bookingWindowsFirstEmployeeBookingWindowsCount = booking_windows.length;
-          debug.bookingWindowsFirst = booking_windows[0]
-            ? {
-                start_time: booking_windows[0].start_time,
-                end_time: booking_windows[0].end_time ?? null,
-                available: booking_windows[0].available ?? null,
-                localFormatted: (() => {
-                  const startIso = booking_windows[0].start_time;
-                  const endIso =
-                    booking_windows[0].end_time ||
-                    new Date(new Date(booking_windows[0].start_time).getTime() + 2 * 60 * 60 * 1000).toISOString();
-                  return formatWindow(startIso, endIso);
-                })(),
-              }
-            : null;
-          debug.bookingWindowsFirstRaw = booking_windows.slice(0, 5).map((bw) => ({
-            start_time: bw.start_time,
-            end_time: bw.end_time ?? null,
-            available: bw.available ?? null,
-            employee_id: bw.employee_id ?? null,
-          }));
-          debug.scheduleWindowsFirstEmployeeScheduleWindowsCount = schedule_windows_len;
-          debug.scheduleWindowsFirstRaw = schedule_windows_raw;
-          // #region agent log
-          fetch("http://127.0.0.1:7816/ingest/6871cd52-8abc-4996-a074-5937cf159ac7", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "d0054e" },
-            body: JSON.stringify({
-              sessionId: "d0054e",
-              runId: "availability-debug",
-              hypothesisId: "H-availability-0slots",
-              location: "app/api/housecall/availability/route.ts:118",
-              message: "repair booking_windows result (first employee)",
-              data: {
-                employeeId: emp.id,
-                serviceDurationMinutes: 120,
-                bookingWindowsCount: booking_windows.length,
-                first: booking_windows[0]
-                  ? {
-                      start_time: booking_windows[0].start_time,
-                      end_time: booking_windows[0].end_time ?? null,
-                      available: booking_windows[0].available ?? null,
-                    }
-                  : null,
-              },
-              timestamp: Date.now(),
-            }),
-          }).catch(() => {});
-          // #endregion
-        }
         for (const w of booking_windows) {
           // If end_time is missing, assume a 2-hour planned job duration.
           const endIso =
             w.end_time ||
-            new Date(new Date(w.start_time).getTime() + 2 * 60 * 60 * 1000).toISOString();
+            new Date(new Date(w.start_time).getTime() + SERVICE_DURATION_MINUTES * 60 * 1000).toISOString();
           const { date, start, end, label } = formatWindow(w.start_time, endIso);
           const dow = getDenverDow(w.start_time);
           // No booking of any type on weekends
@@ -377,33 +203,12 @@ export async function GET(request: NextRequest) {
           }
         }
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        (debug.errors as { employeeId: string; message: string }[]).push({
-          employeeId: emp.id,
-          message: msg.slice(0, 1200),
-        });
         continue;
       }
     }
 
     slots.sort((a, b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
-    // #region agent log
-    fetch("http://127.0.0.1:7816/ingest/6871cd52-8abc-4996-a074-5937cf159ac7", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "d0054e" },
-      body: JSON.stringify({
-        sessionId: "d0054e",
-        runId: "availability-debug",
-        hypothesisId: "H-availability-0slots",
-        location: "app/api/housecall/availability/route.ts:142",
-        message: "repair slots built",
-        data: { slotsCount: slots.length },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-
-    return NextResponse.json({ slots, debug });
+    return NextResponse.json({ slots });
   } catch (err) {
     console.error("Availability fetch error:", err);
     return NextResponse.json(
