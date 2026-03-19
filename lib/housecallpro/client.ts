@@ -233,6 +233,7 @@ export async function listJobs(params?: {
   scheduledStartMax?: string;
   scheduledEndMin?: string;
   scheduledEndMax?: string;
+  workStatus?: string[];
   pageSize?: number;
   page?: number;
 }): Promise<{ jobs: JobListItem[] }> {
@@ -244,18 +245,34 @@ export async function listJobs(params?: {
   if (params?.scheduledStartMax) qs.set("scheduled_start_max", params.scheduledStartMax);
   if (params?.scheduledEndMin) qs.set("scheduled_end_min", params.scheduledEndMin);
   if (params?.scheduledEndMax) qs.set("scheduled_end_max", params.scheduledEndMax);
+  if (params?.workStatus?.length) {
+    params.workStatus.forEach((s) => qs.append("work_status[]", s));
+  }
   if (params?.pageSize) qs.set("page_size", String(params.pageSize));
   if (params?.page) qs.set("page", String(params.page));
   const query = qs.toString() ? `?${qs.toString()}` : "";
   const res = await fetchHCP<Record<string, unknown>>(`/jobs${query}`);
   const raw = (res.jobs ?? res.data ?? res.items ?? []) as Record<string, unknown>[];
   const jobs: JobListItem[] = (Array.isArray(raw) ? raw : []).map((j) => {
-    const sched = j.schedule as { scheduled_start?: string; scheduled_end?: string; assigned_employee_ids?: string[] } | undefined;
+    const sched = j.schedule as Record<string, unknown> | undefined;
+    const rawIds =
+      j.assigned_employee_ids ??
+      sched?.assigned_employee_ids ??
+      j.assigned_employees ??
+      sched?.assigned_employees ??
+      j.assigned_pro_ids ??
+      j.pro_ids ??
+      [];
+    const fromArray = (arr: unknown[]): string[] =>
+      arr.map((x) => (typeof x === "string" ? x : (x as { id?: string })?.id)).filter((id): id is string => Boolean(id));
+    const ids = Array.isArray(rawIds) ? fromArray(rawIds) : [];
+    const singleId = (j.assigned_pro_id ?? j.technician_id ?? sched?.assigned_pro_id ?? (j.primary_pro as { id?: string })?.id) as string | undefined;
+    const assigned_employee_ids = ids.length > 0 ? ids : singleId ? [singleId] : [];
     return {
       id: String(j.id ?? ""),
       scheduled_start: (j.scheduled_start ?? sched?.scheduled_start) as string | undefined,
       scheduled_end: (j.scheduled_end ?? sched?.scheduled_end) as string | undefined,
-      assigned_employee_ids: (j.assigned_employee_ids ?? sched?.assigned_employee_ids ?? []) as string[],
+      assigned_employee_ids,
     };
   });
   return { jobs };

@@ -102,7 +102,11 @@ function subtractJobsFromWindows(
   employeeId: string
 ): { start_time: string; end_time: string }[] {
   const employeeJobs = jobs.filter(
-    (j) => Array.isArray(j.assigned_employee_ids) && j.assigned_employee_ids.includes(employeeId) && j.scheduled_start
+    (j) =>
+      Array.isArray(j.assigned_employee_ids) &&
+      j.assigned_employee_ids.length > 0 &&
+      j.assigned_employee_ids.includes(employeeId) &&
+      j.scheduled_start
   );
   const blocks = employeeJobs
     .map((j) => {
@@ -168,10 +172,8 @@ async function listJobsForWindow(employeeIds: string[], startDate: string, endDa
   while (true) {
     const { jobs: pageJobs } = await hcp.listJobs({
       employeeIds,
-      scheduledStartMin: startDate,
-      scheduledStartMax: endDate,
       scheduledEndMin: startDate,
-      scheduledEndMax: endDate,
+      scheduledStartMax: endDate,
       pageSize: JOBS_PAGE_SIZE,
       page,
     });
@@ -219,7 +221,7 @@ export async function GET(request: NextRequest) {
           showForDays: SHOW_FOR_DAYS,
           startDate,
         }),
-        listJobsForWindow([INSTALL_QUOTE_EMPLOYEE_ID], startDate, endDate),
+        listJobsForWindow([INSTALL_QUOTE_EMPLOYEE_ID], startDate, endDate).catch(() => [] as { scheduled_start?: string; scheduled_end?: string; assigned_employee_ids?: string[] }[]),
       ]);
       const availableWindows = subtractJobsFromWindows(bookingRes.booking_windows, jobs, INSTALL_QUOTE_EMPLOYEE_ID);
       const raw = availableWindows.map((w) => ({
@@ -245,6 +247,11 @@ export async function GET(request: NextRequest) {
         },
         bookingWindowsCount: bookingRes.booking_windows.length,
         jobsCount: jobs.length,
+        jobsSample: jobs.slice(0, 5).map((j) => ({
+          scheduled_start: j.scheduled_start,
+          scheduled_end: j.scheduled_end,
+          assigned_employee_ids: j.assigned_employee_ids,
+        })),
         availableWindowsCount: availableWindows.length,
         slotWindowsCount: slotWindows.length,
         slotWindowsSample: slotWindows.slice(0, 5),
@@ -312,7 +319,19 @@ export async function GET(request: NextRequest) {
     const startDate = denverTomorrowAt(8);
     const endDate = endDateFromStart(startDate, SHOW_FOR_DAYS);
     const employeeIds = employees.map((e) => e.id);
-    const jobs = employeeIds.length > 0 ? await listJobsForWindow(employeeIds, startDate, endDate) : [];
+    let jobs: { scheduled_start?: string; scheduled_end?: string; assigned_employee_ids?: string[] }[] = [];
+    let listJobsError: string | null = null;
+    try {
+      jobs = employeeIds.length > 0 ? await listJobsForWindow(employeeIds, startDate, endDate) : [];
+    } catch (e) {
+      listJobsError = e instanceof Error ? e.message : String(e);
+    }
+
+    const jobsSample = jobs.slice(0, 5).map((j) => ({
+      scheduled_start: j.scheduled_start,
+      scheduled_end: j.scheduled_end,
+      assigned_employee_ids: j.assigned_employee_ids,
+    }));
 
     for (const emp of employees) {
       try {
@@ -329,7 +348,16 @@ export async function GET(request: NextRequest) {
         const slotWindows = windowsToSlots(raw);
         if (!capturedFirst) {
           capturedFirst = true;
+          const employeeJobsCount = jobs.filter(
+            (j) => Array.isArray(j.assigned_employee_ids) && j.assigned_employee_ids.includes(emp.id)
+          ).length;
           debug.source = "booking_windows_minus_jobs";
+          debug.listJobsError = listJobsError;
+          debug.employeeIdsQueried = employeeIds;
+          debug.jobsCount = jobs.length;
+          debug.jobsSample = jobsSample;
+          debug.firstEmployeeId = emp.id;
+          debug.firstEmployeeJobsMatched = employeeJobsCount;
           debug.query = {
             employee_ids: emp.id,
             service_duration: SERVICE_DURATION_MINUTES,
@@ -341,9 +369,7 @@ export async function GET(request: NextRequest) {
             scheduled_end_max: endDate,
             page_size: JOBS_PAGE_SIZE,
           };
-          debug.firstEmployeeId = emp.id;
           debug.firstEmployeeBookingWindowsCount = bookingRes.booking_windows.length;
-          debug.jobsCount = jobs.length;
           debug.firstEmployeeAvailableWindowsCount = availableWindows.length;
           debug.firstEmployeeSlotWindowsCount = slotWindows.length;
           debug.firstEmployeeSlotWindowsSample = slotWindows.slice(0, 5);
