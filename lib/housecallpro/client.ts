@@ -220,6 +220,43 @@ export interface CreateJobPayload {
   };
 }
 
+export type JobListItem = {
+  id: string;
+  scheduled_start?: string;
+  scheduled_end?: string;
+  assigned_employee_ids?: string[];
+};
+
+export async function listJobs(params?: {
+  startDate?: string;
+  endDate?: string;
+  assignedEmployeeIds?: string[];
+  perPage?: number;
+  page?: number;
+}): Promise<{ jobs: JobListItem[] }> {
+  const qs = new URLSearchParams();
+  if (params?.startDate) qs.set("start_date", params.startDate);
+  if (params?.endDate) qs.set("end_date", params.endDate);
+  if (params?.assignedEmployeeIds?.length) {
+    params.assignedEmployeeIds.forEach((id) => qs.append("assigned_employee_ids[]", id));
+  }
+  if (params?.perPage) qs.set("per_page", String(params.perPage));
+  if (params?.page) qs.set("page", String(params.page));
+  const query = qs.toString() ? `?${qs.toString()}` : "";
+  const res = await fetchHCP<Record<string, unknown>>(`/jobs${query}`);
+  const raw = (res.jobs ?? res.data ?? res.items ?? []) as Record<string, unknown>[];
+  const jobs: JobListItem[] = (Array.isArray(raw) ? raw : []).map((j) => {
+    const sched = j.schedule as { scheduled_start?: string; scheduled_end?: string; assigned_employee_ids?: string[] } | undefined;
+    return {
+      id: String(j.id ?? ""),
+      scheduled_start: (j.scheduled_start ?? sched?.scheduled_start) as string | undefined,
+      scheduled_end: (j.scheduled_end ?? sched?.scheduled_end) as string | undefined,
+      assigned_employee_ids: (j.assigned_employee_ids ?? sched?.assigned_employee_ids ?? []) as string[],
+    };
+  });
+  return { jobs };
+}
+
 export async function createJob(payload: CreateJobPayload): Promise<{ job?: { id: string } }> {
   const res = await fetchHCP<Record<string, unknown>>("/jobs", {
     method: "POST",
