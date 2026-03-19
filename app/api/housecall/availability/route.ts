@@ -263,6 +263,8 @@ export async function GET(request: NextRequest) {
       bookingWindowsFirstEmployeeBookingWindowsCount: null,
       bookingWindowsFirst: null,
         bookingWindowsFirstRaw: null,
+        scheduleWindowsFirstEmployeeScheduleWindowsCount: null,
+        scheduleWindowsFirstRaw: null,
         errors: [] as { employeeId: string; message: string }[],
     };
 
@@ -274,6 +276,26 @@ export async function GET(request: NextRequest) {
           showForDays: 7,
           startDate,
         });
+        let schedule_windows_len: number | null = null;
+        let schedule_windows_raw: unknown = null;
+        try {
+          const { schedule_windows } = await hcp.getScheduleWindows(emp.id, {
+            serviceDurationMinutes: SERVICE_DURATION_MINUTES,
+            showForDays: 7,
+            startDate,
+          });
+          schedule_windows_len = schedule_windows.length;
+          schedule_windows_raw = schedule_windows.slice(0, 5).map((sw) => ({
+            start_time: sw.start_time,
+            end_time: sw.end_time ?? null,
+            available: (sw as { available?: unknown }).available ?? null,
+            employee_id: (sw as { employee_id?: unknown }).employee_id ?? null,
+          }));
+        } catch (swErr) {
+          const msg = swErr instanceof Error ? swErr.message : String(swErr);
+          schedule_windows_len = -1;
+          schedule_windows_raw = { error: msg.slice(0, 1200) };
+        }
         if (!loggedFirstEmployee) {
           loggedFirstEmployee = true;
           debug.query = { employee_ids: emp.id, service_duration: SERVICE_DURATION_MINUTES, show_for_days: 7, start_date: startDate };
@@ -299,6 +321,8 @@ export async function GET(request: NextRequest) {
             available: bw.available ?? null,
             employee_id: bw.employee_id ?? null,
           }));
+          debug.scheduleWindowsFirstEmployeeScheduleWindowsCount = schedule_windows_len;
+          debug.scheduleWindowsFirstRaw = schedule_windows_raw;
           // #region agent log
           fetch("http://127.0.0.1:7816/ingest/6871cd52-8abc-4996-a074-5937cf159ac7", {
             method: "POST",
