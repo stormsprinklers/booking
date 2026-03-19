@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
       const installerName = empRow?.name ?? "Installer";
 
       const startDate = denverTomorrowAt(8);
-      const { booking_windows } = await hcp.getBookingWindows(INSTALL_QUOTE_EMPLOYEE_ID, {
+      const { schedule_windows } = await hcp.getScheduleWindows(INSTALL_QUOTE_EMPLOYEE_ID, {
         serviceDurationMinutes: SERVICE_DURATION_MINUTES,
         showForDays: 7,
         startDate,
@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
       const slots: { id: string; date: string; startTime: string; endTime: string; label: string; technicianId?: string; technicianName?: string }[] = [];
       const seen = new Set<string>();
 
-      for (const w of booking_windows) {
+      for (const w of schedule_windows) {
         // If end_time is missing, assume a 2-hour planned job duration.
         const endIso =
           w.end_time ||
@@ -174,12 +174,12 @@ export async function GET(request: NextRequest) {
     for (const emp of employees) {
       try {
         const startDate = denverTomorrowAt(8);
-        const { booking_windows } = await hcp.getBookingWindows(emp.id, {
+        const { schedule_windows } = await hcp.getScheduleWindows(emp.id, {
           serviceDurationMinutes: SERVICE_DURATION_MINUTES,
           showForDays: 7,
           startDate,
         });
-        for (const w of booking_windows) {
+        for (const w of schedule_windows) {
           // If end_time is missing, assume a 2-hour planned job duration.
           const endIso =
             w.end_time ||

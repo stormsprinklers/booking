@@ -69,6 +69,7 @@ function normalizeEmployeeZoneIds(e: EmployeeRaw): string[] {
 }
 type Customer = { id: string; first_name?: string; last_name?: string; email?: string; phone?: string; address_line_1?: string; city?: string; state?: string; zip?: string };
 type BookingWindow = { start_time: string; end_time?: string; employee_id?: string; available?: boolean };
+type ScheduleWindow = { start_time: string; end_time?: string; employee_id?: string; available?: boolean };
 
 export async function getEmployees(): Promise<{ employees: Employee[] }> {
   const res = await fetchHCP<Record<string, unknown>>("/employees");
@@ -141,6 +142,35 @@ export async function getBookingWindows(
   );
   const windows = (res.booking_windows ?? res.data ?? res.items ?? []) as BookingWindow[];
   return { booking_windows: Array.isArray(windows) ? windows : [] };
+}
+
+export async function getScheduleWindows(
+  employeeId: string,
+  options?: { serviceDurationMinutes?: number; showForDays?: number; startDate?: string }
+): Promise<{ schedule_windows: ScheduleWindow[] }> {
+  const serviceDurationMinutes = options?.serviceDurationMinutes;
+  const showForDays = options?.showForDays;
+  const startDate = options?.startDate;
+
+  const qs = new URLSearchParams({
+    employee_ids: employeeId,
+    ...(serviceDurationMinutes && serviceDurationMinutes > 0 ? { service_duration: String(serviceDurationMinutes) } : {}),
+    ...(showForDays && showForDays > 0 ? { show_for_days: String(showForDays) } : {}),
+    ...(startDate ? { start_date: startDate } : {}),
+  });
+
+  // Schedule Windows:
+  // https://api.housecallpro.com/company/schedule_availability
+  // Response includes `schedule_windows`.
+  const res = await fetchHCP<Record<string, unknown>>(`/company/schedule_availability?${qs.toString()}`);
+  const windows = (res.schedule_windows ??
+    (res as { schedule_availability?: { schedule_windows?: unknown } }).schedule_availability?.schedule_windows ??
+    res.scheduleWindows ??
+    res.data ??
+    res.items ??
+    []) as ScheduleWindow[];
+
+  return { schedule_windows: Array.isArray(windows) ? windows : [] };
 }
 
 export interface CreateJobPayload {
