@@ -214,23 +214,43 @@ export async function GET(request: NextRequest) {
 
       const startDate = denverTomorrowAt(8);
       const endDate = endDateFromStart(startDate, 7);
-      const [bookingRes, jobsRes] = await Promise.all([
-        hcp.getBookingWindows(INSTALL_QUOTE_EMPLOYEE_ID, {
-          serviceDurationMinutes: SERVICE_DURATION_MINUTES,
-          showForDays: 7,
-          startDate,
-        }),
-        hcp.listJobs({ startDate, endDate, perPage: 200 }),
-      ]);
-      const availableWindows = subtractJobsFromWindows(
-        bookingRes.booking_windows,
-        jobsRes.jobs,
-        INSTALL_QUOTE_EMPLOYEE_ID
-      );
-      const slotWindows = windowsToSlots(availableWindows);
+
+      let slotWindows: { start_time: string; end_time: string }[];
+      let source: string;
+
+      const scheduleRes = await hcp.getScheduleWindows(INSTALL_QUOTE_EMPLOYEE_ID, {
+        serviceDurationMinutes: SERVICE_DURATION_MINUTES,
+        showForDays: 7,
+        startDate,
+      });
+      if (scheduleRes.schedule_windows.length > 0) {
+        const raw = scheduleRes.schedule_windows.map((w) => ({
+          start_time: w.start_time,
+          end_time: w.end_time ?? new Date(new Date(w.start_time).getTime() + SERVICE_DURATION_MINUTES * 60 * 1000).toISOString(),
+        }));
+        slotWindows = windowsToSlots(raw);
+        source = "schedule_windows";
+      } else {
+        const [bookingRes, jobsRes] = await Promise.all([
+          hcp.getBookingWindows(INSTALL_QUOTE_EMPLOYEE_ID, {
+            serviceDurationMinutes: SERVICE_DURATION_MINUTES,
+            showForDays: 7,
+            startDate,
+          }),
+          hcp.listJobs({ startDate, endDate, perPage: 200 }),
+        ]);
+        const availableWindows = subtractJobsFromWindows(
+          bookingRes.booking_windows,
+          jobsRes.jobs,
+          INSTALL_QUOTE_EMPLOYEE_ID
+        );
+        slotWindows = windowsToSlots(availableWindows);
+        source = "booking_windows_minus_jobs";
+      }
+
       const debug = {
         branch: "upgrade",
-        source: "booking_windows_minus_jobs",
+        source,
         serviceZoneId,
         query: {
           employee_ids: INSTALL_QUOTE_EMPLOYEE_ID,
@@ -238,9 +258,6 @@ export async function GET(request: NextRequest) {
           show_for_days: 7,
           start_date: startDate,
         },
-        bookingWindowsCount: bookingRes.booking_windows.length,
-        jobsCount: jobsRes.jobs.length,
-        availableWindowsCount: availableWindows.length,
         slotWindowsCount: slotWindows.length,
         slotWindowsSample: slotWindows.slice(0, 5),
       };
@@ -292,15 +309,12 @@ export async function GET(request: NextRequest) {
     const seen = new Set<string>();
     const debug: Record<string, unknown> = {
       branch: "repair",
-      source: "booking_windows_minus_jobs",
+      source: null as string | null,
       serviceZoneId,
       serviceDurationMinutes: SERVICE_DURATION_MINUTES,
       employeesConsidered: employees.length,
       query: null,
       firstEmployeeId: null,
-      firstEmployeeBookingWindowsCount: null,
-      firstEmployeeJobsCount: null,
-      firstEmployeeAvailableWindowsCount: null,
       firstEmployeeSlotWindowsCount: null,
       firstEmployeeSlotWindowsSample: null,
       errors: [] as { employeeId: string; message: string }[],
@@ -309,17 +323,38 @@ export async function GET(request: NextRequest) {
 
     const startDate = denverTomorrowAt(8);
     const endDate = endDateFromStart(startDate, 7);
-    const jobsRes = await hcp.listJobs({ startDate, endDate, perPage: 200 });
+    let jobsRes: { jobs: { scheduled_start?: string; scheduled_end?: string; assigned_employee_ids?: string[] }[] } = { jobs: [] };
+    try {
+      jobsRes = await hcp.listJobs({ startDate, endDate, perPage: 200 });
+    } catch {
+      // listJobs may fail if HCP doesn't support params; continue with empty jobs
+    }
 
     for (const emp of employees) {
       try {
-        const { booking_windows } = await hcp.getBookingWindows(emp.id, {
+        let slotWindows: { start_time: string; end_time: string }[];
+        const scheduleRes = await hcp.getScheduleWindows(emp.id, {
           serviceDurationMinutes: SERVICE_DURATION_MINUTES,
           showForDays: 7,
           startDate,
         });
-        const availableWindows = subtractJobsFromWindows(booking_windows, jobsRes.jobs, emp.id);
-        const slotWindows = windowsToSlots(availableWindows);
+        if (scheduleRes.schedule_windows.length > 0) {
+          const raw = scheduleRes.schedule_windows.map((w) => ({
+            start_time: w.start_time,
+            end_time: w.end_time ?? new Date(new Date(w.start_time).getTime() + SERVICE_DURATION_MINUTES * 60 * 1000).toISOString(),
+          }));
+          slotWindows = windowsToSlots(raw);
+          if (!capturedFirst) debug.source = "schedule_windows";
+        } else {
+          const { booking_windows } = await hcp.getBookingWindows(emp.id, {
+            serviceDurationMinutes: SERVICE_DURATION_MINUTES,
+            showForDays: 7,
+            startDate,
+          });
+          const availableWindows = subtractJobsFromWindows(booking_windows, jobsRes.jobs, emp.id);
+          slotWindows = windowsToSlots(availableWindows);
+          if (!capturedFirst) debug.source = "booking_windows_minus_jobs";
+        }
         if (!capturedFirst) {
           capturedFirst = true;
           debug.query = {
@@ -329,9 +364,6 @@ export async function GET(request: NextRequest) {
             start_date: startDate,
           };
           debug.firstEmployeeId = emp.id;
-          debug.firstEmployeeBookingWindowsCount = booking_windows.length;
-          debug.firstEmployeeJobsCount = jobsRes.jobs.length;
-          debug.firstEmployeeAvailableWindowsCount = availableWindows.length;
           debug.firstEmployeeSlotWindowsCount = slotWindows.length;
           debug.firstEmployeeSlotWindowsSample = slotWindows.slice(0, 5);
           // #region agent log
@@ -343,11 +375,10 @@ export async function GET(request: NextRequest) {
               runId: "availability-debug",
               hypothesisId: "H-first-employee",
               location: "app/api/housecall/availability/route.ts:repair-loop",
-              message: "first employee hybrid availability",
+              message: "first employee availability",
               data: {
                 employeeId: emp.id,
-                bookingWindowsCount: booking_windows.length,
-                availableWindowsCount: availableWindows.length,
+                source: debug.source,
                 slotWindowsCount: slotWindows.length,
                 firstSlot: slotWindows[0] ?? null,
               },

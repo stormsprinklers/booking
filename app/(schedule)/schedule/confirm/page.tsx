@@ -42,7 +42,8 @@ export default function ScheduleConfirmPage() {
     return parts.join("\n\n");
   };
 
-  const handleConfirm = async () => {
+  const handleConfirm = async (e?: React.MouseEvent) => {
+    e?.preventDefault();
     if (!slot || !pricingOption) return;
     setSubmitting(true);
     setError(null);
@@ -149,6 +150,7 @@ export default function ScheduleConfirmPage() {
           <p className="mt-4 text-sm text-red-600">{error}</p>
         )}
         <Button
+          type="button"
           variant="primary"
           fullWidth
           size="lg"
