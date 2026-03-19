@@ -6,6 +6,33 @@ import { INSTALL_QUOTE_EMPLOYEE_ID, INSTALL_QUOTE_ZONE_BY_DOW } from "@/lib/conf
 export const dynamic = "force-dynamic";
 
 const DISPLAY_TIME_ZONE = "America/Denver";
+const SERVICE_DURATION_MINUTES = 120;
+
+function denverTomorrowAt(hour24: number): string {
+  // Return a Housecall-style start_date string: YYYY-MM-DDTHH:MM:SS (no timezone suffix)
+  // using the America/Denver calendar date for "tomorrow".
+  const now = new Date();
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone: DISPLAY_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const parts = dtf.formatToParts(now);
+  const map = Object.fromEntries(parts.filter((p) => p.type !== "literal").map((p) => [p.type, p.value]));
+  const y = Number(map.year);
+  const m = Number(map.month);
+  const d = Number(map.day);
+  // Build a UTC date that corresponds to the Denver calendar "today" at noon, then add one day.
+  // We use this just to compute tomorrow's Denver date string safely across DST boundaries.
+  const approxUtc = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+  approxUtc.setUTCDate(approxUtc.getUTCDate() + 1);
+  const yy = approxUtc.getUTCFullYear();
+  const mm = String(approxUtc.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(approxUtc.getUTCDate()).padStart(2, "0");
+  const hh = String(hour24).padStart(2, "0");
+  return `${yy}-${mm}-${dd}T${hh}:00:00`;
+}
 
 function getDenverDateKey(iso: string): string {
   const dtf = new Intl.DateTimeFormat("en-US", {
@@ -104,14 +131,20 @@ export async function GET(request: NextRequest) {
       const empRow = (Array.isArray(rows) ? rows[0] : null) as { id: string; name: string } | null;
       const installerName = empRow?.name ?? "Installer";
 
-      const { booking_windows } = await hcp.getBookingWindows(INSTALL_QUOTE_EMPLOYEE_ID, { serviceDurationMinutes: 120 });
+      const startDate = denverTomorrowAt(8);
+      const { booking_windows } = await hcp.getBookingWindows(INSTALL_QUOTE_EMPLOYEE_ID, {
+        serviceDurationMinutes: SERVICE_DURATION_MINUTES,
+        showForDays: 7,
+        startDate,
+      });
 
       const debug =
         // #region agent log
         {
           branch: "upgrade",
           serviceZoneId,
-          serviceDurationMinutes: 120,
+          serviceDurationMinutes: SERVICE_DURATION_MINUTES,
+          query: { employee_ids: INSTALL_QUOTE_EMPLOYEE_ID, service_duration: SERVICE_DURATION_MINUTES, show_for_days: 7, start_date: startDate },
           bookingWindowsCount: booking_windows.length,
           bookingWindowsFirst: booking_windows[0]
             ? {
@@ -223,7 +256,8 @@ export async function GET(request: NextRequest) {
     const debug: Record<string, unknown> = {
       branch: "repair",
       serviceZoneId,
-      serviceDurationMinutes: 120,
+      serviceDurationMinutes: SERVICE_DURATION_MINUTES,
+      query: null,
       employeesConsidered: employees.length,
       bookingWindowsFirstEmployeeId: null,
       bookingWindowsFirstEmployeeBookingWindowsCount: null,
@@ -234,9 +268,15 @@ export async function GET(request: NextRequest) {
 
     for (const emp of employees) {
       try {
-        const { booking_windows } = await hcp.getBookingWindows(emp.id, { serviceDurationMinutes: 120 });
+        const startDate = denverTomorrowAt(8);
+        const { booking_windows } = await hcp.getBookingWindows(emp.id, {
+          serviceDurationMinutes: SERVICE_DURATION_MINUTES,
+          showForDays: 7,
+          startDate,
+        });
         if (!loggedFirstEmployee) {
           loggedFirstEmployee = true;
+          debug.query = { employee_ids: emp.id, service_duration: SERVICE_DURATION_MINUTES, show_for_days: 7, start_date: startDate };
           debug.bookingWindowsFirstEmployeeId = emp.id;
           debug.bookingWindowsFirstEmployeeBookingWindowsCount = booking_windows.length;
           debug.bookingWindowsFirst = booking_windows[0]

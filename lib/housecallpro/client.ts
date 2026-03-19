@@ -121,14 +121,18 @@ export async function createCustomer(payload: CreateCustomerPayload): Promise<{ 
 
 export async function getBookingWindows(
   employeeId: string,
-  options?: { serviceDurationMinutes?: number }
+  options?: { serviceDurationMinutes?: number; showForDays?: number; startDate?: string }
 ): Promise<{ booking_windows: BookingWindow[] }> {
   const serviceDurationMinutes = options?.serviceDurationMinutes;
+  const showForDays = options?.showForDays;
+  const startDate = options?.startDate;
   const qs = new URLSearchParams({
     // Housecall Pro docs use `employee_ids` (array[string]) for this endpoint.
     // We pass a single employee id as `employee_ids`.
     employee_ids: employeeId,
     ...(serviceDurationMinutes && serviceDurationMinutes > 0 ? { service_duration: String(serviceDurationMinutes) } : {}),
+    ...(showForDays && showForDays > 0 ? { show_for_days: String(showForDays) } : {}),
+    ...(startDate ? { start_date: startDate } : {}),
   });
   // Docs:
   // https://api.housecallpro.com/company/schedule_availability/booking_windows
