@@ -7,6 +7,14 @@ export const dynamic = "force-dynamic";
 
 const DISPLAY_TIME_ZONE = "America/Denver";
 const SERVICE_DURATION_MINUTES = 120;
+const SHOW_FOR_DAYS = 7;
+const JOBS_PAGE_SIZE = 100;
+
+function endDateFromStart(startDateIso: string, days: number): string {
+  const d = new Date(startDateIso);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 19);
+}
 
 function denverTomorrowAt(hour24: number): string {
   // Return a Housecall-style start_date string: YYYY-MM-DDTHH:MM:SS (no timezone suffix)
@@ -87,6 +95,53 @@ function formatWindow(startIso: string, endIso: string): {
   return { date, start, end, label };
 }
 
+/** Subtract scheduled jobs from booking windows for one employee. */
+function subtractJobsFromWindows(
+  bookingWindows: { start_time: string; end_time?: string }[],
+  jobs: { scheduled_start?: string; scheduled_end?: string; assigned_employee_ids?: string[] }[],
+  employeeId: string
+): { start_time: string; end_time: string }[] {
+  const employeeJobs = jobs.filter(
+    (j) => Array.isArray(j.assigned_employee_ids) && j.assigned_employee_ids.includes(employeeId) && j.scheduled_start
+  );
+  const blocks = employeeJobs
+    .map((j) => {
+      const start = new Date(j.scheduled_start!).getTime();
+      const end = j.scheduled_end ? new Date(j.scheduled_end).getTime() : start + SERVICE_DURATION_MINUTES * 60 * 1000;
+      return { start, end };
+    })
+    .sort((a, b) => a.start - b.start);
+
+  const result: { start_time: string; end_time: string }[] = [];
+  for (const w of bookingWindows) {
+    const wStart = new Date(w.start_time).getTime();
+    const wEnd = w.end_time ? new Date(w.end_time).getTime() : wStart + SERVICE_DURATION_MINUTES * 60 * 1000;
+    const segments = [{ start: wStart, end: wEnd }];
+    for (const b of blocks) {
+      const next: { start: number; end: number }[] = [];
+      for (const s of segments) {
+        if (b.end <= s.start || b.start >= s.end) {
+          next.push(s);
+        } else {
+          if (s.start < b.start) next.push({ start: s.start, end: Math.min(s.end, b.start) });
+          if (b.end < s.end) next.push({ start: Math.max(s.start, b.end), end: s.end });
+        }
+      }
+      segments.length = 0;
+      segments.push(...next);
+    }
+    for (const s of segments) {
+      if (s.end - s.start >= SERVICE_DURATION_MINUTES * 60 * 1000) {
+        result.push({
+          start_time: new Date(s.start).toISOString(),
+          end_time: new Date(s.end).toISOString(),
+        });
+      }
+    }
+  }
+  return result;
+}
+
 /** Split availability windows into discrete SERVICE_DURATION_MINUTES slots. */
 function windowsToSlots(
   windows: { start_time: string; end_time: string }[]
@@ -105,6 +160,27 @@ function windowsToSlots(
     }
   }
   return slots;
+}
+
+async function listJobsForWindow(employeeIds: string[], startDate: string, endDate: string) {
+  const jobs: { scheduled_start?: string; scheduled_end?: string; assigned_employee_ids?: string[] }[] = [];
+  let page = 1;
+  while (true) {
+    const { jobs: pageJobs } = await hcp.listJobs({
+      employeeIds,
+      scheduledStartMin: startDate,
+      scheduledStartMax: endDate,
+      scheduledEndMin: startDate,
+      scheduledEndMax: endDate,
+      pageSize: JOBS_PAGE_SIZE,
+      page,
+    });
+    jobs.push(...pageJobs);
+    if (pageJobs.length < JOBS_PAGE_SIZE) break;
+    page += 1;
+    if (page > 20) break;
+  }
+  return jobs;
 }
 
 export async function GET(request: NextRequest) {
@@ -136,28 +212,40 @@ export async function GET(request: NextRequest) {
       const installerName = empRow?.name ?? "Installer";
 
       const startDate = denverTomorrowAt(8);
-      const { booking_windows } = await hcp.getBookingWindows(INSTALL_QUOTE_EMPLOYEE_ID, {
-        serviceDurationMinutes: SERVICE_DURATION_MINUTES,
-        showForDays: 7,
-        startDate,
-      });
-      const raw = booking_windows.map((w) => ({
+      const endDate = endDateFromStart(startDate, SHOW_FOR_DAYS);
+      const [bookingRes, jobs] = await Promise.all([
+        hcp.getBookingWindows(INSTALL_QUOTE_EMPLOYEE_ID, {
+          serviceDurationMinutes: SERVICE_DURATION_MINUTES,
+          showForDays: SHOW_FOR_DAYS,
+          startDate,
+        }),
+        listJobsForWindow([INSTALL_QUOTE_EMPLOYEE_ID], startDate, endDate),
+      ]);
+      const availableWindows = subtractJobsFromWindows(bookingRes.booking_windows, jobs, INSTALL_QUOTE_EMPLOYEE_ID);
+      const raw = availableWindows.map((w) => ({
         start_time: w.start_time,
-        end_time: w.end_time ?? new Date(new Date(w.start_time).getTime() + SERVICE_DURATION_MINUTES * 60 * 1000).toISOString(),
+        end_time: w.end_time,
       }));
       const slotWindows = windowsToSlots(raw);
 
       const debug = {
         branch: "upgrade",
-        source: "booking_windows",
+        source: "booking_windows_minus_jobs",
         serviceZoneId,
         query: {
           employee_ids: INSTALL_QUOTE_EMPLOYEE_ID,
           service_duration: SERVICE_DURATION_MINUTES,
-          show_for_days: 7,
+          show_for_days: SHOW_FOR_DAYS,
           start_date: startDate,
+          scheduled_start_min: startDate,
+          scheduled_start_max: endDate,
+          scheduled_end_min: startDate,
+          scheduled_end_max: endDate,
+          page_size: JOBS_PAGE_SIZE,
         },
-        bookingWindowsCount: booking_windows.length,
+        bookingWindowsCount: bookingRes.booking_windows.length,
+        jobsCount: jobs.length,
+        availableWindowsCount: availableWindows.length,
         slotWindowsCount: slotWindows.length,
         slotWindowsSample: slotWindows.slice(0, 5),
       };
@@ -222,30 +310,41 @@ export async function GET(request: NextRequest) {
     let capturedFirst = false;
 
     const startDate = denverTomorrowAt(8);
+    const endDate = endDateFromStart(startDate, SHOW_FOR_DAYS);
+    const employeeIds = employees.map((e) => e.id);
+    const jobs = employeeIds.length > 0 ? await listJobsForWindow(employeeIds, startDate, endDate) : [];
 
     for (const emp of employees) {
       try {
-        const { booking_windows } = await hcp.getBookingWindows(emp.id, {
+        const bookingRes = await hcp.getBookingWindows(emp.id, {
           serviceDurationMinutes: SERVICE_DURATION_MINUTES,
-          showForDays: 7,
+          showForDays: SHOW_FOR_DAYS,
           startDate,
         });
-        const raw = booking_windows.map((w) => ({
+        const availableWindows = subtractJobsFromWindows(bookingRes.booking_windows, jobs, emp.id);
+        const raw = availableWindows.map((w) => ({
           start_time: w.start_time,
-          end_time: w.end_time ?? new Date(new Date(w.start_time).getTime() + SERVICE_DURATION_MINUTES * 60 * 1000).toISOString(),
+          end_time: w.end_time,
         }));
         const slotWindows = windowsToSlots(raw);
         if (!capturedFirst) {
           capturedFirst = true;
-          debug.source = "booking_windows";
+          debug.source = "booking_windows_minus_jobs";
           debug.query = {
             employee_ids: emp.id,
             service_duration: SERVICE_DURATION_MINUTES,
-            show_for_days: 7,
+            show_for_days: SHOW_FOR_DAYS,
             start_date: startDate,
+            scheduled_start_min: startDate,
+            scheduled_start_max: endDate,
+            scheduled_end_min: startDate,
+            scheduled_end_max: endDate,
+            page_size: JOBS_PAGE_SIZE,
           };
           debug.firstEmployeeId = emp.id;
-          debug.firstEmployeeBookingWindowsCount = booking_windows.length;
+          debug.firstEmployeeBookingWindowsCount = bookingRes.booking_windows.length;
+          debug.jobsCount = jobs.length;
+          debug.firstEmployeeAvailableWindowsCount = availableWindows.length;
           debug.firstEmployeeSlotWindowsCount = slotWindows.length;
           debug.firstEmployeeSlotWindowsSample = slotWindows.slice(0, 5);
         }

@@ -228,19 +228,23 @@ export type JobListItem = {
 };
 
 export async function listJobs(params?: {
-  startDate?: string;
-  endDate?: string;
-  assignedEmployeeIds?: string[];
-  perPage?: number;
+  employeeIds?: string[];
+  scheduledStartMin?: string;
+  scheduledStartMax?: string;
+  scheduledEndMin?: string;
+  scheduledEndMax?: string;
+  pageSize?: number;
   page?: number;
 }): Promise<{ jobs: JobListItem[] }> {
   const qs = new URLSearchParams();
-  if (params?.startDate) qs.set("start_date", params.startDate);
-  if (params?.endDate) qs.set("end_date", params.endDate);
-  if (params?.assignedEmployeeIds?.length) {
-    params.assignedEmployeeIds.forEach((id) => qs.append("assigned_employee_ids[]", id));
+  if (params?.employeeIds?.length) {
+    params.employeeIds.forEach((id) => qs.append("employee_ids[]", id));
   }
-  if (params?.perPage) qs.set("per_page", String(params.perPage));
+  if (params?.scheduledStartMin) qs.set("scheduled_start_min", params.scheduledStartMin);
+  if (params?.scheduledStartMax) qs.set("scheduled_start_max", params.scheduledStartMax);
+  if (params?.scheduledEndMin) qs.set("scheduled_end_min", params.scheduledEndMin);
+  if (params?.scheduledEndMax) qs.set("scheduled_end_max", params.scheduledEndMax);
+  if (params?.pageSize) qs.set("page_size", String(params.pageSize));
   if (params?.page) qs.set("page", String(params.page));
   const query = qs.toString() ? `?${qs.toString()}` : "";
   const res = await fetchHCP<Record<string, unknown>>(`/jobs${query}`);
