@@ -279,18 +279,21 @@ export async function GET(request: NextRequest) {
         let schedule_windows_len: number | null = null;
         let schedule_windows_raw: unknown = null;
         try {
-          const { schedule_windows } = await hcp.getScheduleWindows(emp.id, {
+          const swRes = await hcp.getScheduleWindows(emp.id, {
             serviceDurationMinutes: SERVICE_DURATION_MINUTES,
             showForDays: 7,
             startDate,
           });
-          schedule_windows_len = schedule_windows.length;
-          schedule_windows_raw = schedule_windows.slice(0, 5).map((sw) => ({
+          schedule_windows_len = swRes.schedule_windows.length;
+          schedule_windows_raw = {
+            tried: swRes.debug?.tried ?? null,
+            sample: swRes.schedule_windows.slice(0, 5).map((sw) => ({
             start_time: sw.start_time,
             end_time: sw.end_time ?? null,
             available: (sw as { available?: unknown }).available ?? null,
             employee_id: (sw as { employee_id?: unknown }).employee_id ?? null,
-          }));
+            })),
+          };
         } catch (swErr) {
           const msg = swErr instanceof Error ? swErr.message : String(swErr);
           schedule_windows_len = -1;

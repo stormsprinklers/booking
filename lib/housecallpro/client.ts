@@ -147,7 +147,7 @@ export async function getBookingWindows(
 export async function getScheduleWindows(
   employeeId: string,
   options?: { serviceDurationMinutes?: number; showForDays?: number; startDate?: string }
-): Promise<{ schedule_windows: ScheduleWindow[] }> {
+): Promise<{ schedule_windows: ScheduleWindow[]; debug?: { tried: { path: string; ok: boolean; error?: string }[] } }> {
   const serviceDurationMinutes = options?.serviceDurationMinutes;
   const showForDays = options?.showForDays;
   const startDate = options?.startDate;
@@ -159,11 +159,30 @@ export async function getScheduleWindows(
   });
   // Docs (per HCP): Schedule Windows
   // https://docs.housecallpro.com/docs/housecall-public-api/898190c92fb8b-schedule-windows
-  const res = await fetchHCP<Record<string, unknown>>(
-    `/company/schedule_availability/schedule_windows?${qs.toString()}`
-  );
-  const windows = (res.schedule_windows ?? res.scheduleWindows ?? res.data ?? res.items ?? []) as ScheduleWindow[];
-  return { schedule_windows: Array.isArray(windows) ? windows : [] };
+  //
+  // The docs site has been timing out for us, and HCP has multiple "schedule availability" namespaces.
+  // We probe likely paths and surface which one worked in debug.
+  const candidates = [
+    `/company/schedule_availability/schedule_windows?${qs.toString()}`,
+    `/company/schedule_availability/schedule_windows_v2?${qs.toString()}`,
+    `/company/schedule_windows?${qs.toString()}`,
+    `/schedule_windows?${qs.toString()}`,
+  ];
+
+  const tried: { path: string; ok: boolean; error?: string }[] = [];
+  for (const path of candidates) {
+    try {
+      const res = await fetchHCP<Record<string, unknown>>(path);
+      const windows = (res.schedule_windows ?? res.scheduleWindows ?? res.data ?? res.items ?? []) as ScheduleWindow[];
+      tried.push({ path, ok: true });
+      return { schedule_windows: Array.isArray(windows) ? windows : [], debug: { tried } };
+    } catch (err) {
+      tried.push({ path, ok: false, error: err instanceof Error ? err.message.slice(0, 300) : String(err).slice(0, 300) });
+      continue;
+    }
+  }
+
+  return { schedule_windows: [], debug: { tried } };
 }
 
 export interface CreateJobPayload {
