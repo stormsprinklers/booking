@@ -5,14 +5,53 @@ import { INSTALL_QUOTE_EMPLOYEE_ID, INSTALL_QUOTE_ZONE_BY_DOW } from "@/lib/conf
 
 export const dynamic = "force-dynamic";
 
-function formatWindow(startIso: string, endIso: string): { date: string; start: string; end: string; label: string } {
-  const d = new Date(startIso);
-  const endD = new Date(endIso);
-  const date = d.toISOString().slice(0, 10);
-  const h = d.getHours();
-  const m = d.getMinutes();
-  const eh = endD.getHours();
-  const em = endD.getMinutes();
+const DISPLAY_TIME_ZONE = "America/Denver";
+
+function getDenverDateKey(iso: string): string {
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone: DISPLAY_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  // Example output: "03/19/2026"
+  const parts = dtf.formatToParts(new Date(iso));
+  const map = Object.fromEntries(parts.filter((p) => p.type !== "literal").map((p) => [p.type, p.value]));
+  return `${map.year}-${map.month}-${map.day}`;
+}
+
+function getDenverHM(iso: string): { hh: number; mm: number } {
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone: DISPLAY_TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const parts = dtf.formatToParts(new Date(iso));
+  const map = Object.fromEntries(parts.filter((p) => p.type !== "literal").map((p) => [p.type, p.value]));
+  return { hh: Number(map.hour), mm: Number(map.minute) };
+}
+
+function getDenverDow(iso: string): number {
+  const wd = new Intl.DateTimeFormat("en-US", {
+    timeZone: DISPLAY_TIME_ZONE,
+    weekday: "short",
+  }).format(new Date(iso));
+  // JS getDay: 0=Sun ... 6=Sat
+  const map: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return map[wd] ?? 0;
+}
+
+function formatWindow(startIso: string, endIso: string): {
+  date: string;
+  start: string;
+  end: string;
+  label: string;
+} {
+  const date = getDenverDateKey(startIso);
+  const { hh: h, mm: m } = getDenverHM(startIso);
+  const { hh: eh, mm: em } = getDenverHM(endIso);
+
   const start = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
   const end = `${String(eh).padStart(2, "0")}:${String(em).padStart(2, "0")}`;
   const fmt = (hr: number, min: number) =>
@@ -79,6 +118,13 @@ export async function GET(request: NextRequest) {
                 start_time: booking_windows[0].start_time,
                 end_time: booking_windows[0].end_time ?? null,
                 available: booking_windows[0].available ?? null,
+                localFormatted: (() => {
+                  const startIso = booking_windows[0].start_time;
+                  const endIso =
+                    booking_windows[0].end_time ||
+                    new Date(new Date(booking_windows[0].start_time).getTime() + 2 * 60 * 60 * 1000).toISOString();
+                  return formatWindow(startIso, endIso);
+                })(),
               }
             : null,
         };
@@ -118,8 +164,7 @@ export async function GET(request: NextRequest) {
           w.end_time ||
           new Date(new Date(w.start_time).getTime() + 2 * 60 * 60 * 1000).toISOString();
         const { date, start, end, label } = formatWindow(w.start_time, endIso);
-        const d = new Date(`${date}T12:00:00`);
-        const dow = d.getDay();
+        const dow = getDenverDow(w.start_time);
         // No install quotes on weekends
         if (dow === 0 || dow === 6) continue;
         const allowedZones = INSTALL_QUOTE_ZONE_BY_DOW[dow] ?? [];
@@ -199,6 +244,13 @@ export async function GET(request: NextRequest) {
                 start_time: booking_windows[0].start_time,
                 end_time: booking_windows[0].end_time ?? null,
                 available: booking_windows[0].available ?? null,
+                localFormatted: (() => {
+                  const startIso = booking_windows[0].start_time;
+                  const endIso =
+                    booking_windows[0].end_time ||
+                    new Date(new Date(booking_windows[0].start_time).getTime() + 2 * 60 * 60 * 1000).toISOString();
+                  return formatWindow(startIso, endIso);
+                })(),
               }
             : null;
           debug.bookingWindowsFirstRaw = booking_windows.slice(0, 5).map((bw) => ({
@@ -240,8 +292,7 @@ export async function GET(request: NextRequest) {
             w.end_time ||
             new Date(new Date(w.start_time).getTime() + 2 * 60 * 60 * 1000).toISOString();
           const { date, start, end, label } = formatWindow(w.start_time, endIso);
-          const d = new Date(`${date}T12:00:00`);
-          const dow = d.getDay();
+          const dow = getDenverDow(w.start_time);
           // No booking of any type on weekends
           if (dow === 0 || dow === 6) continue;
           const key = `${date}-${start}-${emp.id}`;
