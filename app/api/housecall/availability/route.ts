@@ -98,6 +98,22 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // #region agent log
+    fetch("http://127.0.0.1:7816/ingest/6871cd52-8abc-4996-a074-5937cf159ac7", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "d0054e" },
+      body: JSON.stringify({
+        sessionId: "d0054e",
+        runId: "availability-debug",
+        hypothesisId: "H-entry",
+        location: "app/api/housecall/availability/route.ts:GET",
+        message: "availability route request",
+        data: { serviceZoneId, category, serviceDurationMinutes: SERVICE_DURATION_MINUTES },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+
     if (!process.env.DATABASE_URL) {
       return NextResponse.json(
         { error: "DATABASE_URL not configured" },
@@ -121,6 +137,18 @@ export async function GET(request: NextRequest) {
         showForDays: 7,
         startDate,
       });
+      const debug = {
+        branch: "upgrade",
+        serviceZoneId,
+        query: {
+          employee_ids: INSTALL_QUOTE_EMPLOYEE_ID,
+          service_duration: SERVICE_DURATION_MINUTES,
+          show_for_days: 7,
+          start_date: startDate,
+        },
+        scheduleWindowsCount: schedule_windows.length,
+        scheduleWindowsSample: schedule_windows.slice(0, 5),
+      };
 
       const slots: { id: string; date: string; startTime: string; endTime: string; label: string; technicianId?: string; technicianName?: string }[] = [];
       const seen = new Set<string>();
@@ -153,7 +181,7 @@ export async function GET(request: NextRequest) {
       }
 
       slots.sort((a, b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
-      return NextResponse.json({ slots });
+      return NextResponse.json({ slots, debug });
     }
 
     const rows = await sql`
@@ -170,6 +198,18 @@ export async function GET(request: NextRequest) {
 
     const slots: { id: string; date: string; startTime: string; endTime: string; label: string; technicianId?: string; technicianName?: string }[] = [];
     const seen = new Set<string>();
+    const debug: Record<string, unknown> = {
+      branch: "repair",
+      serviceZoneId,
+      serviceDurationMinutes: SERVICE_DURATION_MINUTES,
+      employeesConsidered: employees.length,
+      query: null,
+      firstEmployeeId: null,
+      firstEmployeeScheduleWindowsCount: null,
+      firstEmployeeScheduleWindowsSample: null,
+      errors: [] as { employeeId: string; message: string }[],
+    };
+    let capturedFirst = false;
 
     for (const emp of employees) {
       try {
@@ -179,6 +219,37 @@ export async function GET(request: NextRequest) {
           showForDays: 7,
           startDate,
         });
+        if (!capturedFirst) {
+          capturedFirst = true;
+          debug.query = {
+            employee_ids: emp.id,
+            service_duration: SERVICE_DURATION_MINUTES,
+            show_for_days: 7,
+            start_date: startDate,
+          };
+          debug.firstEmployeeId = emp.id;
+          debug.firstEmployeeScheduleWindowsCount = schedule_windows.length;
+          debug.firstEmployeeScheduleWindowsSample = schedule_windows.slice(0, 5);
+          // #region agent log
+          fetch("http://127.0.0.1:7816/ingest/6871cd52-8abc-4996-a074-5937cf159ac7", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "d0054e" },
+            body: JSON.stringify({
+              sessionId: "d0054e",
+              runId: "availability-debug",
+              hypothesisId: "H-first-employee",
+              location: "app/api/housecall/availability/route.ts:repair-loop",
+              message: "first employee schedule windows",
+              data: {
+                employeeId: emp.id,
+                count: schedule_windows.length,
+                first: schedule_windows[0] ?? null,
+              },
+              timestamp: Date.now(),
+            }),
+          }).catch(() => {});
+          // #endregion
+        }
         for (const w of schedule_windows) {
           // If end_time is missing, assume a 2-hour planned job duration.
           const endIso =
@@ -203,12 +274,16 @@ export async function GET(request: NextRequest) {
           }
         }
       } catch (err) {
+        (debug.errors as { employeeId: string; message: string }[]).push({
+          employeeId: emp.id,
+          message: err instanceof Error ? err.message.slice(0, 1200) : String(err).slice(0, 1200),
+        });
         continue;
       }
     }
 
     slots.sort((a, b) => (a.date + a.startTime).localeCompare(b.date + b.startTime));
-    return NextResponse.json({ slots });
+    return NextResponse.json({ slots, debug });
   } catch (err) {
     console.error("Availability fetch error:", err);
     return NextResponse.json(

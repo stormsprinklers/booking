@@ -39,6 +39,7 @@ export default function ScheduleAvailabilityPage() {
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<AvailabilitySlot | null>(null);
+  const [debugInfo, setDebugInfo] = useState<any | null>(null);
 
   useEffect(() => {
     if (!serviceAreaId) {
@@ -83,6 +84,7 @@ export default function ScheduleAvailabilityPage() {
     }
     let cancelled = false;
     setLoading(true);
+    setDebugInfo(null);
     fetch(
       `/api/housecall/availability?service_zone_id=${encodeURIComponent(
         serviceAreaId
@@ -91,6 +93,7 @@ export default function ScheduleAvailabilityPage() {
       .then((res) => res.json())
       .then((data) => {
         if (cancelled) return;
+        setDebugInfo(data.debug ?? null);
         const apiSlots = (data.slots ?? []).map(
           (s: { id: string; date: string; startTime: string; endTime: string; label: string; technicianId?: string; technicianName?: string }) =>
             ({ ...s, spotsLeft: undefined } as AvailabilitySlot)
@@ -202,6 +205,14 @@ export default function ScheduleAvailabilityPage() {
 
         {loading && (
           <p className="mt-8 text-[#102341]/70">Loading availability...</p>
+        )}
+        {!loading && debugInfo && (
+          <div className="mt-6 rounded-xl bg-[#F0F0F0] p-4">
+            <p className="mb-2 text-sm font-medium text-[#102341]/70">Debug (schedule windows)</p>
+            <pre className="max-h-64 overflow-auto text-xs text-[#102341]/80">
+              {JSON.stringify(debugInfo, null, 2)}
+            </pre>
+          </div>
         )}
         {!loading && slots.length === 0 && (
           <p className="mt-8 text-[#102341]/70">No available slots. Please try again or call to schedule.</p>
