@@ -136,7 +136,7 @@ export default function ScheduleDetailsPage() {
           <Input
             label="Phone"
             type="tel"
-            placeholder="(555) 123-4567"
+            placeholder="555-123-4567"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             error={errors.phone}
@@ -184,7 +184,7 @@ export default function ScheduleDetailsPage() {
             </div>
           </div>
           <Input
-            label="Notes (optional)"
+            label="Notes - optional"
             placeholder="Gate code, pet info, specific location of issue..."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}

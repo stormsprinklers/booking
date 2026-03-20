@@ -16,11 +16,9 @@ function getRepairTitle(issueIds: string[], repairFollowUps: Record<string, stri
         title =
           followUp === "one-section"
             ? "Solenoid or wiring repair"
-            : followUp === "one-section-old"
-              ? "Valve box repair"
-              : followUp === "whole-system"
-                ? "System startup repair"
-                : "Won't turn on repair";
+            : followUp === "whole-system"
+              ? "System startup repair"
+              : "Won't turn on repair";
         break;
       case "not-turning-off":
         title =
@@ -34,7 +32,7 @@ function getRepairTitle(issueIds: string[], repairFollowUps: Record<string, stri
         title = "Low pressure diagnosis & repair";
         break;
       case "leak":
-        title = followUp === "yes" ? "Leak repair (difficult access)" : "Leak repair";
+        title = followUp === "yes" ? "Leak repair - difficult access" : "Leak repair";
         break;
       case "coverage-issues":
         title = "Coverage tune-up";
@@ -215,7 +213,7 @@ function getSeasonalPricing(inputs: PricingInputs): PricingOption[] {
       price: 349 + addOnTotal,
       description: "Tune-up + winterization together. Best value. See stormsprinklers.com/sprinkler-maintenance-plans",
       estimatedDuration: "2 visits per year",
-      includes: ["Spring tune-up ($199 value)", "Fall winterization ($150 value)", "Priority scheduling", "Additional benefits"],
+      includes: ["Spring tune-up - $199 value", "Fall winterization - $150 value", "Priority scheduling", "Additional benefits"],
       addOns: addOns.filter((a) => addOnIds.includes(a.id)),
     });
   }
@@ -250,8 +248,8 @@ function getInstallationPricing(inputs: PricingInputs): PricingOption[] {
       estimatedDuration: "Varies by scope",
       includes: [
         "Free on-site or online quote",
-        "Turf irrigation (tiered pricing)",
-        "Connection (city or irrigation water)",
+        "Turf irrigation with tiered pricing",
+        "Connection for city or irrigation water",
         result.hasSod || result.hasMulch || result.hasRock ? "Sod/mulch/rock as selected" : "Optional sod, mulch, rock available",
       ],
       customerMessage: `Most installations in this range run $${result.min}–$${result.max}. We'll give you a full quote before any work begins.`,

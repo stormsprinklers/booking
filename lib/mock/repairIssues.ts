@@ -30,8 +30,7 @@ export const REPAIR_ISSUES: RepairIssue[] = [
     hasFollowUp: true,
     followUpQuestion: "Is it one section or the whole system?",
     followUpOptions: [
-      { id: "one-section", label: "One section", min: 99, max: 149 },
-      { id: "one-section-old", label: "One section (older/DIY system)", min: 399, max: 999 },
+      { id: "one-section", label: "One section", min: 99, max: 399 },
       { id: "whole-system", label: "Whole system", min: 50, max: 149 },
     ],
     min: 99,
@@ -43,8 +42,8 @@ export const REPAIR_ISSUES: RepairIssue[] = [
     hasFollowUp: true,
     followUpQuestion: "Is your system older or DIY-installed?",
     followUpOptions: [
-      { id: "no", label: "No (standard system)", min: 100, max: 150 },
-      { id: "yes", label: "Yes (may need full valve box replacement)", min: 400, max: 1000 },
+      { id: "no", label: "No", min: 99, max: 149 },
+      { id: "yes", label: "Yes", min: 399, max: 999 },
     ],
     min: 100,
     max: 150,
@@ -81,9 +80,9 @@ export const REPAIR_ISSUES: RepairIssue[] = [
     hasFollowUp: true,
     followUpQuestion: "What's the issue?",
     followUpOptions: [
-      { id: "install", label: "Need to install (doesn't exist)", min: 800, max: 1500 },
-      { id: "crack", label: "Leaking from crack (needs replacement)", min: 500, max: 1500 },
-      { id: "vent", label: "Leaking from bottom (vent—usually quick fix)", min: 100, max: 150 },
+      { id: "install", label: "Need to install", min: 799, max: 1499 },
+      { id: "crack", label: "Leaking from crack", min: 499, max: 1499 },
+      { id: "vent", label: "Leaking from bottom drain", min: 99, max: 149 },
     ],
     min: 500,
     max: 1500,
@@ -135,7 +134,7 @@ export const REPAIR_ISSUES: RepairIssue[] = [
   },
   {
     id: "general",
-    label: "Not sure / other",
+    label: "Not sure or other",
     hasFollowUp: false,
     min: 99,
     max: 199,

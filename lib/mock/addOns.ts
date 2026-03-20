@@ -17,7 +17,7 @@ export const addOns: AddOn[] = [
     id: "smart-controller",
     title: "Smart Sprinkler Controller",
     price: 499,
-    description: "Install and set up a WiFi smart controller (hardware included)",
+    description: "Install and set up a WiFi smart controller with hardware included",
   },
   {
     id: "maintenance-plan",

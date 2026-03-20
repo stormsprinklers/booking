@@ -10,15 +10,15 @@ import { REPAIR_ISSUES } from "@/lib/mock/repairIssues";
 import type { ServiceCategoryId } from "@/lib/types";
 
 const PROPERTY_SIZES = [
-  { id: "small", label: "Small (~2,000 sq ft)" },
-  { id: "medium", label: "Medium (~5,000 sq ft)" },
-  { id: "large", label: "Large (~8,000 sq ft)" },
+  { id: "small", label: "Small - 2,000 sq ft" },
+  { id: "medium", label: "Medium - 5,000 sq ft" },
+  { id: "large", label: "Large - 8,000 sq ft" },
 ] as const;
 
 const SEASONAL_SERVICES = [
   { id: "tuneup" as const, label: "Spring Start-Up / Tune-Up" },
   { id: "winterization" as const, label: "Winterization" },
-  { id: "both" as const, label: "Both (Maintenance Plan—best value)" },
+  { id: "both" as const, label: "Both - Maintenance Plan" },
 ];
 
 const ZONE_OPTIONS = [
@@ -155,7 +155,6 @@ export default function PricingWizardPage() {
 
         <div className="mt-10">
           <h1 className="text-2xl font-bold text-[#102341]">{category.title}</h1>
-          <p className="mt-1 text-[#102341]/70">{category.description}</p>
         </div>
 
         <div className="mt-8 space-y-6">
@@ -165,7 +164,7 @@ export default function PricingWizardPage() {
                 <div className="space-y-6">
                   <div>
                     <p className="mb-3 font-medium text-[#102341]">
-                      What issues are you experiencing? (select all that apply)
+                      What issues are you experiencing?
                     </p>
                     <div className="space-y-2">
                       {REPAIR_ISSUES.map((opt) => {
@@ -265,7 +264,7 @@ export default function PricingWizardPage() {
               {step === 3 && (
                 <div>
                   <p className="mb-3 font-medium text-[#102341]">
-                    Optional add-ons (most customers love these)
+                    Optional add-ons
                   </p>
                   <div className="space-y-2">
                     {repairAddOns.map((opt) => {
@@ -321,7 +320,7 @@ export default function PricingWizardPage() {
                   <Input
                     label="Phone"
                     type="tel"
-                    placeholder="(555) 123-4567"
+                    placeholder="555-123-4567"
                     value={inputs.contactPhone ?? ""}
                     onChange={(e) => setInputs({ contactPhone: e.target.value })}
                   />
@@ -397,7 +396,7 @@ export default function PricingWizardPage() {
                           : "border-[#F0F0F0] hover:border-[#4C9BC8]/50"
                       }`}
                     >
-                      Don&apos;t know (we&apos;ll estimate)
+                      Don&apos;t know
                     </button>
                   </div>
                 </div>
@@ -461,7 +460,7 @@ export default function PricingWizardPage() {
                   <Input
                     label="Phone"
                     type="tel"
-                    placeholder="(555) 123-4567"
+                    placeholder="555-123-4567"
                     value={inputs.contactPhone ?? ""}
                     onChange={(e) => setInputs({ contactPhone: e.target.value })}
                   />
@@ -486,7 +485,7 @@ export default function PricingWizardPage() {
               {step === 1 && (
                 <div>
                   <p className="mb-3 font-medium text-[#102341]">
-                    Turf area to irrigate (sq ft)
+                    Turf area in sq ft
                   </p>
                   <div className="space-y-2">
                     {PROPERTY_SIZES.map((opt) => (
@@ -555,7 +554,7 @@ export default function PricingWizardPage() {
                           : "border-[#F0F0F0] hover:border-[#4C9BC8]/50"
                       }`}
                     >
-                      No (new system)
+                      No
                     </button>
                   </div>
                 </div>
@@ -573,7 +572,7 @@ export default function PricingWizardPage() {
                           : "border-[#F0F0F0] hover:border-[#4C9BC8]/50"
                       }`}
                     >
-                      City water (drinking water)
+                      City water
                     </button>
                     <button
                       type="button"
@@ -584,7 +583,7 @@ export default function PricingWizardPage() {
                           : "border-[#F0F0F0] hover:border-[#4C9BC8]/50"
                       }`}
                     >
-                      Irrigation water (separate line)
+                      Irrigation water
                     </button>
                     <button
                       type="button"
@@ -603,10 +602,10 @@ export default function PricingWizardPage() {
               {step === 4 && (
                 <div>
                   <p className="mb-3 font-medium text-[#102341]">
-                    Optional: sod, mulch, or rock? (skip for irrigation-only estimate)
+                    Optional: sod, mulch, or rock
                   </p>
                   <Input
-                    label="Sod (sq ft)"
+                    label="Sod"
                     type="number"
                     min={0}
                     placeholder="0"
@@ -618,7 +617,7 @@ export default function PricingWizardPage() {
                     }
                   />
                   <Input
-                    label="Mulch (sq ft)"
+                    label="Mulch"
                     type="number"
                     min={0}
                     placeholder="0"
@@ -631,7 +630,7 @@ export default function PricingWizardPage() {
                     className="mt-4"
                   />
                   <Input
-                    label="Rock (sq ft)"
+                    label="Rock"
                     type="number"
                     min={0}
                     placeholder="0"
@@ -666,7 +665,7 @@ export default function PricingWizardPage() {
                   <Input
                     label="Phone"
                     type="tel"
-                    placeholder="(555) 123-4567"
+                    placeholder="555-123-4567"
                     value={inputs.contactPhone ?? ""}
                     onChange={(e) => setInputs({ contactPhone: e.target.value })}
                   />
