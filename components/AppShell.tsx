@@ -6,14 +6,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-[#F0F0F0] bg-white">
-        <div className="mx-auto flex h-16 max-w-4xl items-center justify-between px-4">
+        <div className="mx-auto flex h-24 max-w-4xl items-center justify-between px-4">
           <Link href="/pricing" className="flex items-center">
             <Image
               src="/storm-logo.png"
               alt="Storm Sprinklers - Repair & Installation"
-              width={180}
-              height={48}
-              className="h-12 w-auto object-contain"
+              width={360}
+              height={96}
+              className="h-24 w-auto object-contain"
               priority
             />
           </Link>
