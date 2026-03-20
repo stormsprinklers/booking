@@ -87,6 +87,12 @@ export function calculateRock(sqFt: number): number {
   return Math.round(sqFt * ROCK_RATE + blocks * ROCK_BLOCK_FEE);
 }
 
+export interface InstallationLineItem {
+  label: string;
+  min: number;
+  max: number;
+}
+
 export interface InstallationEstimateResult {
   min: number;
   max: number;
@@ -95,6 +101,7 @@ export interface InstallationEstimateResult {
   hasMulch: boolean;
   hasRock: boolean;
   hasConnection: boolean;
+  lineItems?: InstallationLineItem[];
 }
 
 export function getInstallationEstimate(inputs: PricingInputs): InstallationEstimateResult | null {
@@ -122,6 +129,24 @@ export function getInstallationEstimate(inputs: PricingInputs): InstallationEsti
   const min = subtotal;
   const max = Math.round(subtotal * 1.15);
 
+  const lineItems: InstallationLineItem[] = [];
+  if (turfArea) {
+    lineItems.push({ label: `${turfArea.toLocaleString()} sq ft turf irrigation`, min: turfCost, max: turfCost });
+  }
+  if (connectionCost > 0) {
+    const connLabel = waterType === "culinary" ? "City water connection" : waterType === "secondary" ? "Irrigation water connection" : "Water connection (est.)";
+    lineItems.push({ label: connLabel, min: connectionCost, max: connectionCost });
+  }
+  if ((sodSqFt ?? 0) > 0) {
+    lineItems.push({ label: `${sodSqFt} sq ft sod`, min: sodCost, max: sodCost });
+  }
+  if ((mulchSqFt ?? 0) > 0) {
+    lineItems.push({ label: `${mulchSqFt} sq ft mulch`, min: mulchCost, max: mulchCost });
+  }
+  if ((rockSqFt ?? 0) > 0) {
+    lineItems.push({ label: `${rockSqFt} sq ft rock`, min: rockCost, max: rockCost });
+  }
+
   const parts: string[] = [];
   if (turfArea) parts.push(`${turfArea.toLocaleString()} sq ft turf irrigation`);
   if (!hasExistingSprinklers) parts.push(waterType === "culinary" ? "city water connection" : waterType === "secondary" ? "irrigation water connection" : "connection (est.)");
@@ -137,5 +162,6 @@ export function getInstallationEstimate(inputs: PricingInputs): InstallationEsti
     hasMulch: (mulchSqFt ?? 0) > 0,
     hasRock: (rockSqFt ?? 0) > 0,
     hasConnection,
+    lineItems: lineItems.length > 0 ? lineItems : undefined,
   };
 }

@@ -120,6 +120,28 @@ export async function POST(request: NextRequest) {
     const jobId = (res.job as { id?: string })?.id ?? (res as { id?: string }).id;
     if (!jobId) throw new Error("Create job did not return job ID");
 
+    if (sql && (customer?.email || customer?.phone)) {
+      try {
+        const normPhone = normalizePhone(customer.phone);
+        if (customer.email?.trim()) {
+          await sql`
+            UPDATE leads SET converted_at = NOW(), hcp_job_id = ${jobId}
+            WHERE LOWER(TRIM(email)) = LOWER(${customer.email.trim()})
+              AND converted_at IS NULL
+          `;
+        }
+        if (!customer.email?.trim() && normPhone.length >= 10) {
+          await sql`
+            UPDATE leads SET converted_at = NOW(), hcp_job_id = ${jobId}
+            WHERE REGEXP_REPLACE(phone, '\D', '', 'g') LIKE ${"%" + normPhone}
+              AND converted_at IS NULL
+          `;
+        }
+      } catch (e) {
+        console.warn("Mark lead converted failed:", e);
+      }
+    }
+
     if (employeeId) {
       try {
         await hcp.dispatchJobToEmployee(jobId, employeeId);

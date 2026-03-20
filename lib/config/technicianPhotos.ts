@@ -1,6 +1,7 @@
 const base = "/technicians";
 
 const map: Record<string, string> = {
+  "pro_e12efc0bfb58452296972dcc80c89682": `${base}/pro_e12efc0bfb58452296972dcc80c89682.png`,
   "pro_910244d6184f44f39b9911dc037864e8": `${base}/pro_910244d6184f44f39b9911dc037864e8.png`,
   "pro_7e2e3dc6e90e49b4a82bbbd999ea28e4": `${base}/pro_7e2e3dc6e90e49b4a82bbbd999ea28e4.png`,
   "pro_dd9a6a2a236049458165cfca833f94fb": `${base}/pro_dd9a6a2a236049458165cfca833f94fb.png`,

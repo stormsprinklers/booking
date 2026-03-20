@@ -9,6 +9,12 @@ export interface ServiceCategory {
 }
 
 // Pricing
+export interface QuoteLineItem {
+  label: string;
+  min: number;
+  max: number;
+}
+
 export interface PricingOption {
   id: string;
   tier: "good" | "better" | "best" | "single";
@@ -19,6 +25,7 @@ export interface PricingOption {
   estimatedDuration: string;
   includes: string[];
   addOns?: AddOn[];
+  lineItems?: QuoteLineItem[];
   customerMessage?: string;
 }
 

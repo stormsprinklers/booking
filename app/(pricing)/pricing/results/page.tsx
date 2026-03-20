@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, Card } from "@/components/ui";
+import { QuoteBreakdown } from "@/components/QuoteBreakdown";
 import { usePricing } from "@/contexts/PricingContext";
 import { track } from "@/lib/analytics";
 
 const STORAGE_KEY_CONTACT = "storm_booking_contact";
 const STORAGE_KEY_PRICING_INPUTS = "storm_booking_pricing_inputs";
+const STORAGE_KEY_SELECTED_OPTION = "storm_booking_selected_option";
 
 function formatPrice(opt: { price: number; priceRange?: { min: number; max: number } }) {
   if (opt.priceRange) {
@@ -24,6 +26,28 @@ export default function PricingResultsPage() {
   useEffect(() => {
     track("pricing_completed", { optionCount: options.length });
   }, [options.length]);
+
+  const capturedRef = useRef(false);
+  useEffect(() => {
+    if (capturedRef.current) return;
+    const name = inputs.contactName?.trim();
+    const email = inputs.contactEmail?.trim() || null;
+    const phone = inputs.contactPhone?.trim() || null;
+    if (!name || (!email && !phone)) return;
+    capturedRef.current = true;
+    fetch("/api/leads/capture", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name,
+        email,
+        phone,
+        serviceCategory: inputs.serviceCategory,
+        serviceTitle: selectedOption?.title ?? null,
+        pricingInputs: inputs,
+      }),
+    }).catch(() => {});
+  }, [inputs, selectedOption?.title]);
 
   const priceForBooking = selectedOption?.priceRange
     ? Math.round((selectedOption.priceRange.min + selectedOption.priceRange.max) / 2)
@@ -44,6 +68,9 @@ export default function PricingResultsPage() {
         })
       );
       sessionStorage.setItem(STORAGE_KEY_PRICING_INPUTS, JSON.stringify(inputs));
+      if (selectedOption) {
+        sessionStorage.setItem(STORAGE_KEY_SELECTED_OPTION, JSON.stringify(selectedOption));
+      }
     } catch {
       // ignore
     }
@@ -133,10 +160,19 @@ export default function PricingResultsPage() {
                     </p>
                   )}
                 </div>
-                <div className="mt-4 flex items-center gap-4 sm:mt-0 sm:flex-col sm:items-end">
-                  <span className="text-2xl font-bold text-[#102341]">
-                    {formatPrice(opt)}
-                  </span>
+                <div className="mt-4 flex flex-col items-end gap-3 sm:mt-0">
+                  {opt.lineItems && opt.lineItems.length > 0 ? (
+                    <QuoteBreakdown
+                      lineItems={opt.lineItems}
+                      totalMin={opt.priceRange?.min ?? opt.price}
+                      totalMax={opt.priceRange?.max ?? opt.price}
+                      className="w-full sm:w-auto sm:min-w-[200px]"
+                    />
+                  ) : (
+                    <span className="text-2xl font-bold text-[#102341]">
+                      {formatPrice(opt)}
+                    </span>
+                  )}
                   <Button
                     size="md"
                     variant="primary"

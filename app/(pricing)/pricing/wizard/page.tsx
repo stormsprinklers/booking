@@ -406,7 +406,11 @@ export default function PricingWizardPage() {
                   <p className="mb-3 font-medium text-[#102341]">Optional add-ons</p>
                   <div className="space-y-2">
                     {addOns
-                      .filter((a) => a.id !== "tuneup" && a.id !== "winterization")
+                      .filter((a) => {
+                        if (a.id === "tuneup" || a.id === "winterization") return false;
+                        if (inputs.seasonalServiceType === "both" && a.id === "maintenance-plan") return false;
+                        return true;
+                      })
                       .map((opt) => {
                         const selected = (inputs.addOnIds ?? []).includes(opt.id);
                         return (

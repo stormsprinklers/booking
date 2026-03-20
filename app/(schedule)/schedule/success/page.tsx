@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useBooking } from "@/contexts/BookingContext";
 import { Button, Card } from "@/components/ui";
+import { QuoteBreakdown } from "@/components/QuoteBreakdown";
 import { getTechnicianPhotoUrl } from "@/lib/config/technicianPhotos";
 import { formatTechnicianDisplayName } from "@/lib/format/technicianName";
 
@@ -62,10 +63,19 @@ export default function ScheduleSuccessPage() {
           </div>
           <div>
             <p className="text-sm font-medium text-[#102341]/60">Price estimate</p>
-            <p className="text-xl font-bold text-[#102341]">
-              ${pricingOption.price}
-              {pricingOption.priceRange && `–$${pricingOption.priceRange.max}`}
-            </p>
+            {pricingOption.lineItems && pricingOption.lineItems.length > 0 ? (
+              <QuoteBreakdown
+                lineItems={pricingOption.lineItems}
+                totalMin={pricingOption.priceRange?.min ?? pricingOption.price}
+                totalMax={pricingOption.priceRange?.max ?? pricingOption.price}
+                className="mt-2"
+              />
+            ) : (
+              <p className="text-xl font-bold text-[#102341]">
+                ${pricingOption.price}
+                {pricingOption.priceRange && `–$${pricingOption.priceRange.max}`}
+              </p>
+            )}
           </div>
           {slot.technicianId && (
             <div className="flex items-center gap-3 pt-2">

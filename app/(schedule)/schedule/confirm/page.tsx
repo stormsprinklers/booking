@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card } from "@/components/ui";
+import { QuoteBreakdown } from "@/components/QuoteBreakdown";
 import { useBooking } from "@/contexts/BookingContext";
 import { track } from "@/lib/analytics";
 import { formatTechnicianDisplayName } from "@/lib/format/technicianName";
@@ -122,10 +123,19 @@ export default function ScheduleConfirmPage() {
           </div>
           <div>
             <p className="text-sm font-medium text-[#102341]/60">Price estimate</p>
-            <p className="text-xl font-bold text-[#102341]">
-              ${pricingOption.price}
-              {pricingOption.priceRange && `–$${pricingOption.priceRange.max}`}
-            </p>
+            {pricingOption.lineItems && pricingOption.lineItems.length > 0 ? (
+              <QuoteBreakdown
+                lineItems={pricingOption.lineItems}
+                totalMin={pricingOption.priceRange?.min ?? pricingOption.price}
+                totalMax={pricingOption.priceRange?.max ?? pricingOption.price}
+                className="mt-2"
+              />
+            ) : (
+              <p className="text-xl font-bold text-[#102341]">
+                ${pricingOption.price}
+                {pricingOption.priceRange && `–$${pricingOption.priceRange.max}`}
+              </p>
+            )}
           </div>
           <div>
             <p className="text-sm font-medium text-[#102341]/60">Time</p>

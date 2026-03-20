@@ -9,12 +9,22 @@ import { track } from "@/lib/analytics";
 import type { ServiceCategoryId } from "@/lib/types";
 import type { PricingOption } from "@/lib/types";
 
+const STORAGE_KEY_SELECTED_OPTION = "storm_booking_selected_option";
+
 function buildPricingOptionFromParams(params: URLSearchParams): PricingOption | null {
   const optionId = params.get("optionId");
   const title = params.get("title");
   const price = params.get("price");
   const description = params.get("description") ?? "";
   if (!optionId || !title || !price) return null;
+  let stored: PricingOption | null = null;
+  try {
+    const raw = typeof window !== "undefined" ? sessionStorage.getItem(STORAGE_KEY_SELECTED_OPTION) : null;
+    if (raw) stored = JSON.parse(raw) as PricingOption;
+  } catch {
+    // ignore
+  }
+  if (stored?.id === optionId) return stored;
   return {
     id: optionId,
     tier: "single",

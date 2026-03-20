@@ -1,4 +1,10 @@
 {
+  "crons": [
+    {
+      "path": "/api/leads/send-abandoned",
+      "schedule": "*/15 * * * *"
+    }
+  ],
   "rewrites": [
     { "source": "/:path*", "destination": "/:path*" }
   ],

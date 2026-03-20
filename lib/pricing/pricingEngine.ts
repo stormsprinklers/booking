@@ -137,6 +137,35 @@ function getRepairPricing(inputs: PricingInputs): PricingOption[] {
   const selectedAddOns = addOns.filter((a) => addOnIds.includes(a.id));
   const repairTitle = getRepairTitle(issueIds, repairFollowUps);
 
+  const lineItems: { label: string; min: number; max: number }[] = [];
+  for (const issueId of issueIds) {
+    const issue = REPAIR_ISSUES.find((i) => i.id === issueId);
+    if (!issue) continue;
+    let min: number;
+    let max: number;
+    if (issue.id === "moving-adding-heads") {
+      const heads = Math.max(1, headCount);
+      min = 149 * heads;
+      max = 199 * heads;
+    } else if (issue.hasFollowUp && issue.followUpOptions && repairFollowUps[issueId]) {
+      const opt = issue.followUpOptions.find((o) => o.id === repairFollowUps[issueId]);
+      if (opt) {
+        min = opt.min;
+        max = opt.max;
+      } else {
+        min = issue.min;
+        max = issue.max;
+      }
+    } else {
+      min = issue.min;
+      max = issue.max;
+    }
+    lineItems.push({ label: issue.label, min, max });
+  }
+  for (const a of selectedAddOns) {
+    lineItems.push({ label: a.title, min: a.price, max: a.price });
+  }
+
   return [
     {
       id: "repair-basic",
@@ -156,6 +185,7 @@ function getRepairPricing(inputs: PricingInputs): PricingOption[] {
         "5-year warranty when we winterize your system",
       ],
       addOns: selectedAddOns.length ? selectedAddOns : undefined,
+      lineItems,
       customerMessage: `Most customers pay between $${totalMin}–$${totalMax} for this kind of repair.`,
     },
   ];
@@ -179,7 +209,15 @@ function getSeasonalPricing(inputs: PricingInputs): PricingOption[] {
 
   const options: PricingOption[] = [];
 
+  const seasonalAddOns = addOns.filter((a) => addOnIds.includes(a.id));
+
   if (seasonalServiceType === "tuneup" || !seasonalServiceType) {
+    const lineItems: { label: string; min: number; max: number }[] = [
+      { label: "Spring Start-Up / Tune-Up", min: tuneupPrice, max: tuneupPrice },
+    ];
+    for (const a of seasonalAddOns) {
+      lineItems.push({ label: a.title, min: a.price, max: a.price });
+    }
     options.push({
       id: "seasonal-tuneup",
       tier: "single",
@@ -188,11 +226,18 @@ function getSeasonalPricing(inputs: PricingInputs): PricingOption[] {
       description: `Wake up your system for the season. Up to 8 zones included, +$25 per additional zone.`,
       estimatedDuration: "45–60 minutes",
       includes: ["System flush", "Head adjustment", "Zone test", "Controller check"],
-      addOns: addOns.filter((a) => addOnIds.includes(a.id)),
+      addOns: seasonalAddOns,
+      lineItems,
     });
   }
 
   if (seasonalServiceType === "winterization" || !seasonalServiceType) {
+    const lineItems: { label: string; min: number; max: number }[] = [
+      { label: "Winterization", min: winterPrice, max: winterPrice },
+    ];
+    for (const a of seasonalAddOns) {
+      lineItems.push({ label: a.title, min: a.price, max: a.price });
+    }
     options.push({
       id: "seasonal-winter",
       tier: "single",
@@ -201,11 +246,18 @@ function getSeasonalPricing(inputs: PricingInputs): PricingOption[] {
       description: `Blow-out and winter prep. Up to 8 zones included, +$15 per additional zone.`,
       estimatedDuration: "45–60 minutes",
       includes: ["Blow-out", "Shut-off", "Winter prep"],
-      addOns: addOns.filter((a) => addOnIds.includes(a.id)),
+      addOns: seasonalAddOns,
+      lineItems,
     });
   }
 
   if (seasonalServiceType === "both") {
+    const lineItems: { label: string; min: number; max: number }[] = [
+      { label: "Storm Shield Maintenance Plan", min: 349, max: 349 },
+    ];
+    for (const a of seasonalAddOns) {
+      lineItems.push({ label: a.title, min: a.price, max: a.price });
+    }
     options.push({
       id: "seasonal-plan",
       tier: "best",
@@ -214,7 +266,8 @@ function getSeasonalPricing(inputs: PricingInputs): PricingOption[] {
       description: "Tune-up + winterization together. Best value. See stormsprinklers.com/sprinkler-maintenance-plans",
       estimatedDuration: "2 visits per year",
       includes: ["Spring tune-up - $199 value", "Fall winterization - $150 value", "Priority scheduling", "Additional benefits"],
-      addOns: addOns.filter((a) => addOnIds.includes(a.id)),
+      addOns: seasonalAddOns,
+      lineItems,
     });
   }
 
@@ -237,6 +290,10 @@ function getInstallationPricing(inputs: PricingInputs): PricingOption[] {
   const result = getInstallationEstimate(inputs);
   if (!result) return [];
 
+  const lineItems = result.lineItems
+    ? result.lineItems.map((li) => ({ label: li.label, min: li.min, max: li.max }))
+    : undefined;
+
   return [
     {
       id: "installation-estimate",
@@ -257,6 +314,7 @@ function getInstallationPricing(inputs: PricingInputs): PricingOption[] {
           : []),
         result.hasSod || result.hasMulch || result.hasRock ? "Sod/mulch/rock as selected" : "Optional sod, mulch, rock available",
       ],
+      lineItems,
       customerMessage: `Most installations in this range run $${result.min}–$${result.max}. We'll give you a full quote before any work begins.`,
     },
   ];
