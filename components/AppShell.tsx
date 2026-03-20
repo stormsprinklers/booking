@@ -15,6 +15,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               height={96}
               className="h-24 w-auto object-contain"
               priority
+              unoptimized
             />
           </Link>
           <nav className="flex gap-6 text-sm">
