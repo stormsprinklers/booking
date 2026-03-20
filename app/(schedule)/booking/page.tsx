@@ -7,7 +7,6 @@ import { Button, Card, Input } from "@/components/ui";
 import { useBooking } from "@/contexts/BookingContext";
 import { validateAddress } from "@/lib/service-area/validateAddress";
 import { DIRECT_BOOKING_OPTIONS } from "@/lib/config/directBookingOptions";
-import { serviceCategories } from "@/lib/mock/serviceCategories";
 import { track } from "@/lib/analytics";
 import type { ServiceCategoryId } from "@/lib/types";
 
@@ -128,7 +127,13 @@ export default function BookingPage() {
             </p>
 
             <div className="mt-8 space-y-4">
-              {serviceCategories.map((cat) => (
+              {(
+                [
+                  { id: "repair" as const, title: "Repair", description: "Fix leaks, broken heads, pressure issues, or system not turning on" },
+                  { id: "seasonal" as const, title: "Maintenance", description: "Spring start-up, winterization, or regular maintenance" },
+                  { id: "installation" as const, title: "Install quote", description: "New sprinkler system—free on-site or video quote" },
+                ] as const
+              ).map((cat) => (
                 <button
                   key={cat.id}
                   type="button"
