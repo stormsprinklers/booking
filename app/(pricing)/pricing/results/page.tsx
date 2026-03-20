@@ -2,9 +2,12 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button, Card } from "@/components/ui";
 import { usePricing } from "@/contexts/PricingContext";
 import { track } from "@/lib/analytics";
+
+const STORAGE_KEY = "storm_booking_contact";
 
 function formatPrice(opt: { price: number; priceRange?: { min: number; max: number } }) {
   if (opt.priceRange) {
@@ -14,15 +17,57 @@ function formatPrice(opt: { price: number; priceRange?: { min: number; max: numb
 }
 
 export default function PricingResultsPage() {
+  const router = useRouter();
   const { inputs, options, selectedOption, setSelectedOption } = usePricing();
 
   useEffect(() => {
     track("pricing_completed", { optionCount: options.length });
   }, [options.length]);
 
+  const priceForBooking = selectedOption?.priceRange
+    ? Math.round((selectedOption.priceRange.min + selectedOption.priceRange.max) / 2)
+    : selectedOption?.price;
   const bookingHref = selectedOption
-    ? `/schedule?category=${inputs.serviceCategory}&optionId=${selectedOption.id}&price=${selectedOption.price}&title=${encodeURIComponent(selectedOption.title)}&description=${encodeURIComponent(selectedOption.description)}`
+    ? `/schedule?category=${inputs.serviceCategory}&optionId=${selectedOption.id}&price=${priceForBooking ?? selectedOption.price}&title=${encodeURIComponent(selectedOption.title)}&description=${encodeURIComponent(selectedOption.description ?? "")}`
     : "#";
+
+  const handleBookOnSite = () => {
+    if (!selectedOption) return;
+    try {
+      sessionStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          name: inputs.contactName?.trim() ?? "",
+          email: inputs.contactEmail?.trim() ?? "",
+          phone: inputs.contactPhone?.trim() ?? "",
+          consentToContact: inputs.consentToContact ?? false,
+        })
+      );
+    } catch {
+      // ignore
+    }
+    router.push(bookingHref);
+  };
+
+  const handleBookVideoQuote = () => {
+    if (!selectedOption) return;
+    try {
+      sessionStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          name: inputs.contactName?.trim() ?? "",
+          email: inputs.contactEmail?.trim() ?? "",
+          phone: inputs.contactPhone?.trim() ?? "",
+          consentToContact: inputs.consentToContact ?? false,
+        })
+      );
+    } catch {
+      // ignore
+    }
+    router.push(
+      `/schedule/video-quote?category=${inputs.serviceCategory}&optionId=${selectedOption.id}&price=${priceForBooking ?? selectedOption.price}&title=${encodeURIComponent(selectedOption.title)}&description=${encodeURIComponent(selectedOption.description ?? "")}`
+    );
+  };
 
   if (options.length === 0) {
     return (
@@ -88,6 +133,11 @@ export default function PricingResultsPage() {
                   <p className="mt-2 text-sm text-[#102341]/60">
                     Est. {opt.estimatedDuration}
                   </p>
+                  {opt.customerMessage && (
+                    <p className="mt-2 text-sm text-[#4C9BC8] font-medium">
+                      {opt.customerMessage}
+                    </p>
+                  )}
                 </div>
                 <div className="mt-4 flex items-center gap-4 sm:mt-0 sm:flex-col sm:items-end">
                   <span className="text-2xl font-bold text-[#102341]">
@@ -109,13 +159,58 @@ export default function PricingResultsPage() {
           ))}
         </div>
 
-        <div className="mt-10">
+        <div className="mt-6 space-y-4">
+          <div className="rounded-lg bg-[#F8FAFC] p-4 text-sm text-[#102341]/80 space-y-1">
+            <p>We always give a full quote before work begins—no surprise charges.</p>
+            <p>5-year warranty when we winterize your system. Same-day or next-day service often available.</p>
+          </div>
+        </div>
+
+        <div className="mt-10 space-y-4">
           {selectedOption ? (
-            <Link href={bookingHref}>
-              <Button variant="primary" fullWidth size="lg" className="w-full">
+            inputs.serviceCategory === "installation" ? (
+              <>
+                <p className="font-medium text-[#102341]">
+                  How would you like to get your quote?
+                </p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Button
+                    variant="secondary"
+                    fullWidth
+                    size="lg"
+                    onClick={handleBookVideoQuote}
+                    className="h-auto flex-col items-start gap-2 py-4 text-left"
+                  >
+                    <span className="font-semibold">Video call quote</span>
+                    <span className="text-sm font-normal text-[#102341]/70">
+                      Schedule a video call and we&apos;ll walk through your project together.
+                    </span>
+                  </Button>
+                  <Button
+                    variant="primary"
+                    fullWidth
+                    size="lg"
+                    onClick={handleBookOnSite}
+                    className="h-auto flex-col items-start gap-2 py-4 text-left"
+                  >
+                    <span className="font-semibold">On-site quote</span>
+                    <span className="text-sm font-normal text-white/90">
+                      Book an in-person visit to get a detailed quote at your property.
+                    </span>
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <Button
+                variant="primary"
+                fullWidth
+                size="lg"
+                className="w-full"
+                onClick={handleBookOnSite}
+              >
                 Book this service →
               </Button>
-            </Link>
+            )
           ) : (
             <Button variant="primary" fullWidth size="lg" disabled className="w-full">
               Select an option above

@@ -2,56 +2,45 @@
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Button, Card, Stepper } from "@/components/ui";
+import { Button, Input, Stepper } from "@/components/ui";
 import { usePricing } from "@/contexts/PricingContext";
 import { serviceCategories } from "@/lib/mock/serviceCategories";
 import { addOns } from "@/lib/mock/addOns";
-import { getPricingOptions } from "@/lib/pricing/pricingEngine";
+import { REPAIR_ISSUES } from "@/lib/mock/repairIssues";
 import type { ServiceCategoryId } from "@/lib/types";
 
 const PROPERTY_SIZES = [
-  { id: "small", label: "Small (under 5,000 sq ft)" },
-  { id: "medium", label: "Medium (5,000–15,000 sq ft)" },
-  { id: "large", label: "Large (over 15,000 sq ft)" },
+  { id: "small", label: "Small (~2,000 sq ft)" },
+  { id: "medium", label: "Medium (~5,000 sq ft)" },
+  { id: "large", label: "Large (~8,000 sq ft)" },
 ] as const;
 
-const REPAIR_ISSUES = [
-  { id: "not-turning-on", label: "Sprinklers not turning on" },
-  { id: "not-turning-off", label: "Sprinklers not turning off" },
-  { id: "low-pressure", label: "Low pressure" },
-  { id: "controller-issue", label: "Controller / timer issue" },
-  { id: "leak", label: "Leak or wet spots" },
-  { id: "broken-backflow", label: "Broken backflow preventer" },
-  { id: "broken-filter", label: "Broken filter" },
-  { id: "adding-upgrade", label: "Adding an upgrade" },
-  { id: "main-shutoff", label: "Main shutoff valve (stop and waste)" },
-  { id: "valve-repair", label: "Sprinkler valve repair" },
-  { id: "broken-heads", label: "Broken or misaligned heads" },
-  { id: "general", label: "Not sure / other" },
+const SEASONAL_SERVICES = [
+  { id: "tuneup" as const, label: "Spring Start-Up / Tune-Up" },
+  { id: "winterization" as const, label: "Winterization" },
+  { id: "both" as const, label: "Both (Maintenance Plan—best value)" },
 ];
 
-const ISSUE_START_OPTIONS: {
-  id: "today" | "within-week" | "weeks-ago" | "ongoing" | "dont-know";
-  label: string;
-}[] = [
-  { id: "today", label: "Today" },
-  { id: "within-week", label: "Within the week" },
-  { id: "weeks-ago", label: "Multiple weeks ago" },
-  { id: "ongoing", label: "Ongoing / long-term issue" },
-  { id: "dont-know", label: "Don't know" },
+const ZONE_OPTIONS = [
+  { id: 4, label: "4 zones or fewer" },
+  { id: 6, label: "5–6 zones" },
+  { id: 8, label: "7–8 zones" },
+  { id: 10, label: "9–10 zones" },
+  { id: 12, label: "11+ zones" },
 ];
 
-const UPGRADE_SCOPES = [
-  { id: "zones", label: "Add zones to existing system" },
-  { id: "smart", label: "Smart controller upgrade" },
-  { id: "full", label: "New system install" },
-];
-
-const REPAIR_ADDONS = [
-  { id: "tuneup", title: "Full System Tune-Up", price: 79 },
-  { id: "smart-controller", title: "Smart Sprinkler Controller", price: 199 },
-  { id: "annual-plan", title: "Annual Maintenance Plan", price: 149 },
-];
+function getMonthBasedAddOns() {
+  const month = new Date().getMonth() + 1; // 1–12
+  const tuneupMonths = [1, 2, 3, 4, 5, 6, 7, 8]; // Jan–Aug
+  const winterMonths = [9, 10, 11]; // Sep–Nov
+  return addOns.filter((a) => {
+    if (a.id === "tuneup") return tuneupMonths.includes(month);
+    if (a.id === "winterization") return winterMonths.includes(month);
+    if (a.id === "smart-controller") return true;
+    if (a.id === "maintenance-plan") return true;
+    return false;
+  });
+}
 
 export default function PricingWizardPage() {
   const searchParams = useSearchParams();
@@ -67,13 +56,31 @@ export default function PricingWizardPage() {
     setInputs({ serviceCategory: categoryParam });
   }, [categoryParam, setInputs]);
 
-  const totalSteps = categoryParam === "repair" ? 3 : categoryParam === "upgrade" ? 3 : 2;
+  const repairSteps = 4;
+  const seasonalSteps = 4;
+  const installSteps = 5;
+
+  const totalSteps =
+    categoryParam === "repair"
+      ? repairSteps
+      : categoryParam === "seasonal"
+        ? seasonalSteps
+        : categoryParam === "installation"
+          ? installSteps
+          : 2;
+
+  const repairStepLabels = ["Issue", "Details", "Add-ons", "Contact"];
+  const seasonalStepLabels = ["Service", "Zones", "Add-ons", "Contact"];
+  const installStepLabels = ["Turf area", "Existing sprinklers", "Water type", "Extras", "Contact"];
+
   const stepLabels =
     categoryParam === "repair"
-      ? ["Issue", "Property", "When"]
-      : categoryParam === "upgrade"
-        ? ["Scope", "Property", "Add-ons"]
-        : ["Service", "Add-ons"];
+      ? repairStepLabels
+      : categoryParam === "seasonal"
+        ? seasonalStepLabels
+        : categoryParam === "installation"
+          ? installStepLabels
+          : ["Step 1", "Step 2"];
 
   const handleNext = () => {
     if (step < totalSteps) {
@@ -87,23 +94,59 @@ export default function PricingWizardPage() {
 
   const handleBack = () => setStep(Math.max(1, step - 1));
 
+  const issuesNeedingFollowUp = (inputs.issueTypes ?? []).filter((id) => {
+    const issue = REPAIR_ISSUES.find((i) => i.id === id);
+    return issue?.hasFollowUp;
+  });
+
+  const hasUnansweredFollowUps =
+    categoryParam === "repair" &&
+    step === 2 &&
+    issuesNeedingFollowUp.some((id) => !(inputs.repairFollowUps ?? {})[id]);
+
   const canProceed = () => {
     if (categoryParam === "repair") {
       if (step === 1) return (inputs.issueTypes ?? []).length > 0;
-      if (step === 2) return !!inputs.propertySize;
+      if (step === 2) {
+        const needsHeadCount = (inputs.issueTypes ?? []).includes("moving-adding-heads");
+        if (needsHeadCount && (!inputs.headCount || inputs.headCount < 1)) return false;
+        return true;
+      }
       if (step === 3) return true;
-    }
-    if (categoryParam === "upgrade") {
-      if (step === 1) return !!inputs.scope;
-      if (step === 2) return !!inputs.propertySize;
-      if (step === 3) return true;
+      if (step === 4)
+        return !!(
+          inputs.contactName?.trim() &&
+          inputs.contactEmail?.trim() &&
+          inputs.contactPhone?.trim()
+        );
     }
     if (categoryParam === "seasonal") {
-      if (step === 1) return true;
-      if (step === 2) return true;
+      if (step === 1) return !!inputs.seasonalServiceType;
+      if (step === 2) return inputs.zoneCount !== undefined || inputs.zoneCountUnknown === true;
+      if (step === 3) return true;
+      if (step === 4)
+        return !!(
+          inputs.contactName?.trim() &&
+          inputs.contactEmail?.trim() &&
+          inputs.contactPhone?.trim()
+        );
+    }
+    if (categoryParam === "installation") {
+      if (step === 1) return (inputs.turfSqFt ?? 0) > 0 || !!inputs.propertySize;
+      if (step === 2) return inputs.hasExistingSprinklers !== undefined;
+      if (step === 3) return !!inputs.waterType;
+      if (step === 4) return true;
+      if (step === 5)
+        return !!(
+          inputs.contactName?.trim() &&
+          inputs.contactEmail?.trim() &&
+          inputs.contactPhone?.trim()
+        );
     }
     return false;
   };
+
+  const repairAddOns = getMonthBasedAddOns();
 
   return (
     <div className="min-h-screen bg-white">
@@ -151,12 +194,221 @@ export default function PricingWizardPage() {
                       })}
                     </div>
                   </div>
-                  <div>
-                    <p className="mb-3 font-medium text-[#102341]">
-                      Add to your repair
+                </div>
+              )}
+              {step === 2 && (
+                <div className="space-y-6">
+                  {!(
+                    (inputs.issueTypes ?? []).includes("moving-adding-heads") ||
+                    issuesNeedingFollowUp.filter((id) => id !== "moving-adding-heads").length > 0
+                  ) && (
+                    <p className="text-[#102341]/70">
+                      No additional details needed. Click Continue.
                     </p>
-                    <div className="space-y-2">
-                      {REPAIR_ADDONS.map((opt) => {
+                  )}
+                  {(inputs.issueTypes ?? []).includes("moving-adding-heads") && (
+                    <div>
+                      <p className="mb-3 font-medium text-[#102341]">
+                        How many heads are you adding or moving?
+                      </p>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={20}
+                        placeholder="1"
+                        value={inputs.headCount ?? ""}
+                        onChange={(e) =>
+                          setInputs({ headCount: parseInt(e.target.value, 10) || undefined })
+                        }
+                      />
+                    </div>
+                  )}
+                  {issuesNeedingFollowUp
+                    .filter((id) => id !== "moving-adding-heads")
+                    .map((issueId) => {
+                      const issue = REPAIR_ISSUES.find((i) => i.id === issueId);
+                      if (!issue?.followUpOptions) return null;
+                      const selected = (inputs.repairFollowUps ?? {})[issueId];
+                      return (
+                        <div key={issueId}>
+                          <p className="mb-3 font-medium text-[#102341]">
+                            {issue.followUpQuestion}
+                          </p>
+                          <div className="space-y-2">
+                            {issue.followUpOptions.map((opt) => (
+                              <button
+                                key={opt.id}
+                                type="button"
+                                onClick={() =>
+                                  setInputs({
+                                    repairFollowUps: {
+                                      ...(inputs.repairFollowUps ?? {}),
+                                      [issueId]: opt.id,
+                                    },
+                                  })
+                                }
+                                className={`w-full rounded-xl border-2 p-4 text-left transition ${
+                                  selected === opt.id
+                                    ? "border-[#4C9BC8] bg-[#C2E4F0]/30"
+                                    : "border-[#F0F0F0] hover:border-[#4C9BC8]/50"
+                                }`}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+              {step === 3 && (
+                <div>
+                  <p className="mb-3 font-medium text-[#102341]">
+                    Optional add-ons (most customers love these)
+                  </p>
+                  <div className="space-y-2">
+                    {repairAddOns.map((opt) => {
+                      const selected = (inputs.addOnIds ?? []).includes(opt.id);
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => {
+                            const ids = inputs.addOnIds ?? [];
+                            const next = selected
+                              ? ids.filter((x) => x !== opt.id)
+                              : [...ids, opt.id];
+                            setInputs({ addOnIds: next });
+                          }}
+                          className={`flex w-full items-center justify-between rounded-xl border-2 p-4 text-left transition ${
+                            selected
+                              ? "border-[#4C9BC8] bg-[#C2E4F0]/30"
+                              : "border-[#F0F0F0] hover:border-[#4C9BC8]/50"
+                          }`}
+                        >
+                          <span>
+                            {opt.title}{" "}
+                            {opt.price > 0 && (
+                              <span className="text-[#102341]/60">+${opt.price}</span>
+                            )}
+                          </span>
+                          {selected && <span className="text-[#4C9BC8]">✓</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {step === 4 && (
+                <div className="space-y-4">
+                  <p className="font-medium text-[#102341]">
+                    We&apos;ll show your estimate and can schedule a visit.
+                  </p>
+                  <Input
+                    label="Name"
+                    placeholder="Jane Smith"
+                    value={inputs.contactName ?? ""}
+                    onChange={(e) => setInputs({ contactName: e.target.value })}
+                  />
+                  <Input
+                    label="Email"
+                    type="email"
+                    placeholder="jane@example.com"
+                    value={inputs.contactEmail ?? ""}
+                    onChange={(e) => setInputs({ contactEmail: e.target.value })}
+                  />
+                  <Input
+                    label="Phone"
+                    type="tel"
+                    placeholder="(555) 123-4567"
+                    value={inputs.contactPhone ?? ""}
+                    onChange={(e) => setInputs({ contactPhone: e.target.value })}
+                  />
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={inputs.consentToContact ?? false}
+                      onChange={(e) => setInputs({ consentToContact: e.target.checked })}
+                      className="rounded"
+                    />
+                    <span className="text-sm text-[#102341]/80">
+                      I consent to be contacted about this project
+                    </span>
+                  </label>
+                </div>
+              )}
+            </>
+          )}
+
+          {categoryParam === "seasonal" && (
+            <>
+              {step === 1 && (
+                <div>
+                  <p className="mb-3 font-medium text-[#102341]">
+                    What service do you need?
+                  </p>
+                  <div className="space-y-2">
+                    {SEASONAL_SERVICES.map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setInputs({ seasonalServiceType: opt.id })}
+                        className={`w-full rounded-xl border-2 p-4 text-left transition ${
+                          inputs.seasonalServiceType === opt.id
+                            ? "border-[#4C9BC8] bg-[#C2E4F0]/30"
+                            : "border-[#F0F0F0] hover:border-[#4C9BC8]/50"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {step === 2 && (
+                <div>
+                  <p className="mb-3 font-medium text-[#102341]">
+                    How many zones does your system have?
+                  </p>
+                  <div className="space-y-2">
+                    {ZONE_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => {
+                          setInputs({ zoneCount: opt.id, zoneCountUnknown: false });
+                        }}
+                        className={`w-full rounded-xl border-2 p-4 text-left transition ${
+                          inputs.zoneCount === opt.id
+                            ? "border-[#4C9BC8] bg-[#C2E4F0]/30"
+                            : "border-[#F0F0F0] hover:border-[#4C9BC8]/50"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setInputs({ zoneCountUnknown: true, zoneCount: 8 })}
+                      className={`w-full rounded-xl border-2 p-4 text-left transition ${
+                        inputs.zoneCountUnknown
+                          ? "border-[#4C9BC8] bg-[#C2E4F0]/30"
+                          : "border-[#F0F0F0] hover:border-[#4C9BC8]/50"
+                      }`}
+                    >
+                      Don&apos;t know (we&apos;ll estimate)
+                    </button>
+                  </div>
+                </div>
+              )}
+              {step === 3 && (
+                <div>
+                  <p className="mb-3 font-medium text-[#102341]">Optional add-ons</p>
+                  <div className="space-y-2">
+                    {addOns
+                      .filter((a) => a.id !== "tuneup" && a.id !== "winterization")
+                      .map((opt) => {
                         const selected = (inputs.addOnIds ?? []).includes(opt.id);
                         return (
                           <button
@@ -177,12 +429,102 @@ export default function PricingWizardPage() {
                           >
                             <span>
                               {opt.title}{" "}
-                              <span className="text-[#102341]/60">+${opt.price}</span>
+                              {opt.price > 0 && (
+                                <span className="text-[#102341]/60">+${opt.price}</span>
+                              )}
                             </span>
                             {selected && <span className="text-[#4C9BC8]">✓</span>}
                           </button>
                         );
                       })}
+                  </div>
+                </div>
+              )}
+              {step === 4 && (
+                <div className="space-y-4">
+                  <p className="font-medium text-[#102341]">
+                    We&apos;ll show your estimate and can schedule a visit.
+                  </p>
+                  <Input
+                    label="Name"
+                    placeholder="Jane Smith"
+                    value={inputs.contactName ?? ""}
+                    onChange={(e) => setInputs({ contactName: e.target.value })}
+                  />
+                  <Input
+                    label="Email"
+                    type="email"
+                    placeholder="jane@example.com"
+                    value={inputs.contactEmail ?? ""}
+                    onChange={(e) => setInputs({ contactEmail: e.target.value })}
+                  />
+                  <Input
+                    label="Phone"
+                    type="tel"
+                    placeholder="(555) 123-4567"
+                    value={inputs.contactPhone ?? ""}
+                    onChange={(e) => setInputs({ contactPhone: e.target.value })}
+                  />
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={inputs.consentToContact ?? false}
+                      onChange={(e) => setInputs({ consentToContact: e.target.checked })}
+                      className="rounded"
+                    />
+                    <span className="text-sm text-[#102341]/80">
+                      I consent to be contacted about this project
+                    </span>
+                  </label>
+                </div>
+              )}
+            </>
+          )}
+
+          {categoryParam === "installation" && (
+            <>
+              {step === 1 && (
+                <div>
+                  <p className="mb-3 font-medium text-[#102341]">
+                    Turf area to irrigate (sq ft)
+                  </p>
+                  <div className="space-y-2">
+                    {PROPERTY_SIZES.map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => {
+                          const sqft =
+                            opt.id === "small" ? 2000 : opt.id === "medium" ? 5000 : 8000;
+                          setInputs({
+                            propertySize: opt.id,
+                            turfSqFt: sqft,
+                          });
+                        }}
+                        className={`w-full rounded-xl border-2 p-4 text-left transition ${
+                          inputs.propertySize === opt.id
+                            ? "border-[#4C9BC8] bg-[#C2E4F0]/30"
+                            : "border-[#F0F0F0] hover:border-[#4C9BC8]/50"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                    <div>
+                      <Input
+                        label="Or enter specific sq ft"
+                        type="number"
+                        min={500}
+                        placeholder="e.g. 3500"
+                        value={inputs.turfSqFt && !inputs.propertySize ? inputs.turfSqFt : ""}
+                        onChange={(e) => {
+                          const v = parseInt(e.target.value, 10);
+                          setInputs({
+                            turfSqFt: v > 0 ? v : undefined,
+                            propertySize: undefined,
+                          });
+                        }}
+                      />
                     </div>
                   </div>
                 </div>
@@ -190,200 +532,155 @@ export default function PricingWizardPage() {
               {step === 2 && (
                 <div>
                   <p className="mb-3 font-medium text-[#102341]">
-                    Property size
+                    Do you already have sprinklers in the front yard?
                   </p>
                   <div className="space-y-2">
-                    {PROPERTY_SIZES.map((opt) => (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        onClick={() => setInputs({ propertySize: opt.id })}
-                        className={`w-full rounded-xl border-2 p-4 text-left transition ${
-                          inputs.propertySize === opt.id
-                            ? "border-[#4C9BC8] bg-[#C2E4F0]/30"
-                            : "border-[#F0F0F0] hover:border-[#4C9BC8]/50"
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setInputs({ hasExistingSprinklers: true })}
+                      className={`w-full rounded-xl border-2 p-4 text-left transition ${
+                        inputs.hasExistingSprinklers === true
+                          ? "border-[#4C9BC8] bg-[#C2E4F0]/30"
+                          : "border-[#F0F0F0] hover:border-[#4C9BC8]/50"
+                      }`}
+                    >
+                      Yes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setInputs({ hasExistingSprinklers: false })}
+                      className={`w-full rounded-xl border-2 p-4 text-left transition ${
+                        inputs.hasExistingSprinklers === false
+                          ? "border-[#4C9BC8] bg-[#C2E4F0]/30"
+                          : "border-[#F0F0F0] hover:border-[#4C9BC8]/50"
+                      }`}
+                    >
+                      No (new system)
+                    </button>
                   </div>
                 </div>
               )}
               {step === 3 && (
                 <div>
-                  <p className="mb-3 font-medium text-[#102341]">
-                    When did the issue start?
-                  </p>
+                  <p className="mb-3 font-medium text-[#102341]">What type of water?</p>
                   <div className="space-y-2">
-                    {ISSUE_START_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        onClick={() => setInputs({ issueStartTime: opt.id })}
-                        className={`w-full rounded-xl border-2 p-4 text-left transition ${
-                          inputs.issueStartTime === opt.id
-                            ? "border-[#4C9BC8] bg-[#C2E4F0]/30"
-                            : "border-[#F0F0F0] hover:border-[#4C9BC8]/50"
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setInputs({ waterType: "culinary" })}
+                      className={`w-full rounded-xl border-2 p-4 text-left transition ${
+                        inputs.waterType === "culinary"
+                          ? "border-[#4C9BC8] bg-[#C2E4F0]/30"
+                          : "border-[#F0F0F0] hover:border-[#4C9BC8]/50"
+                      }`}
+                    >
+                      Culinary
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setInputs({ waterType: "secondary" })}
+                      className={`w-full rounded-xl border-2 p-4 text-left transition ${
+                        inputs.waterType === "secondary"
+                          ? "border-[#4C9BC8] bg-[#C2E4F0]/30"
+                          : "border-[#F0F0F0] hover:border-[#4C9BC8]/50"
+                      }`}
+                    >
+                      Secondary
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setInputs({ waterType: "dont-know" })}
+                      className={`w-full rounded-xl border-2 p-4 text-left transition ${
+                        inputs.waterType === "dont-know"
+                          ? "border-[#4C9BC8] bg-[#C2E4F0]/30"
+                          : "border-[#F0F0F0] hover:border-[#4C9BC8]/50"
+                      }`}
+                    >
+                      Don&apos;t know
+                    </button>
                   </div>
                 </div>
               )}
-            </>
-          )}
-
-          {categoryParam === "upgrade" && (
-            <>
-              {step === 1 && (
+              {step === 4 && (
                 <div>
                   <p className="mb-3 font-medium text-[#102341]">
-                    What do you need?
+                    Optional: sod, mulch, or rock? (skip for irrigation-only estimate)
                   </p>
-                  <div className="space-y-2">
-                    {UPGRADE_SCOPES.map((opt) => (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        onClick={() => setInputs({ scope: opt.id })}
-                        className={`w-full rounded-xl border-2 p-4 text-left transition ${
-                          inputs.scope === opt.id
-                            ? "border-[#4C9BC8] bg-[#C2E4F0]/30"
-                            : "border-[#F0F0F0] hover:border-[#4C9BC8]/50"
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
+                  <Input
+                    label="Sod (sq ft)"
+                    type="number"
+                    min={0}
+                    placeholder="0"
+                    value={inputs.sodSqFt ?? ""}
+                    onChange={(e) =>
+                      setInputs({
+                        sodSqFt: parseInt(e.target.value, 10) || undefined,
+                      })
+                    }
+                  />
+                  <Input
+                    label="Mulch (sq ft)"
+                    type="number"
+                    min={0}
+                    placeholder="0"
+                    value={inputs.mulchSqFt ?? ""}
+                    onChange={(e) =>
+                      setInputs({
+                        mulchSqFt: parseInt(e.target.value, 10) || undefined,
+                      })
+                    }
+                    className="mt-4"
+                  />
+                  <Input
+                    label="Rock (sq ft)"
+                    type="number"
+                    min={0}
+                    placeholder="0"
+                    value={inputs.rockSqFt ?? ""}
+                    onChange={(e) =>
+                      setInputs({
+                        rockSqFt: parseInt(e.target.value, 10) || undefined,
+                      })
+                    }
+                    className="mt-4"
+                  />
                 </div>
               )}
-              {step === 2 && (
-                <div>
-                  <p className="mb-3 font-medium text-[#102341]">
-                    Property size
+              {step === 5 && (
+                <div className="space-y-4">
+                  <p className="font-medium text-[#102341]">
+                    We&apos;ll show your estimate. Free on-site quote always available.
                   </p>
-                  <div className="space-y-2">
-                    {PROPERTY_SIZES.map((opt) => (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        onClick={() => setInputs({ propertySize: opt.id })}
-                        className={`w-full rounded-xl border-2 p-4 text-left transition ${
-                          inputs.propertySize === opt.id
-                            ? "border-[#4C9BC8] bg-[#C2E4F0]/30"
-                            : "border-[#F0F0F0] hover:border-[#4C9BC8]/50"
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {step === 3 && (
-                <div>
-                  <p className="mb-3 font-medium text-[#102341]">
-                    Optional add-ons
-                  </p>
-                  <div className="space-y-2">
-                    {addOns
-                      .filter((a) => a.id !== "membership")
-                      .map((opt) => {
-                        const selected =
-                          (inputs.addOnIds ?? []).indexOf(opt.id) >= 0;
-                        return (
-                          <button
-                            key={opt.id}
-                            type="button"
-                            onClick={() => {
-                              const ids = inputs.addOnIds ?? [];
-                              const next = selected
-                                ? ids.filter((x) => x !== opt.id)
-                                : [...ids, opt.id];
-                              setInputs({ addOnIds: next });
-                            }}
-                            className={`flex w-full items-center justify-between rounded-xl border-2 p-4 text-left transition ${
-                              selected
-                                ? "border-[#4C9BC8] bg-[#C2E4F0]/30"
-                                : "border-[#F0F0F0] hover:border-[#4C9BC8]/50"
-                            }`}
-                          >
-                            <span>
-                              {opt.title}{" "}
-                              {opt.price > 0 && (
-                                <span className="text-[#102341]/60">
-                                  +${opt.price}
-                                </span>
-                              )}
-                            </span>
-                            {selected && <span className="text-[#4C9BC8]">✓</span>}
-                          </button>
-                        );
-                      })}
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-
-          {categoryParam === "seasonal" && (
-            <>
-              {step === 1 && (
-                <div>
-                  <p className="mb-3 font-medium text-[#102341]">
-                    We offer spring start-up, winterization, or both. Select any
-                    that apply.
-                  </p>
-                  <p className="text-sm text-[#102341]/60">
-                    (Pricing will show options on the next step.)
-                  </p>
-                </div>
-              )}
-              {step === 2 && (
-                <div>
-                  <p className="mb-3 font-medium text-[#102341]">
-                    Optional add-ons
-                  </p>
-                  <div className="space-y-2">
-                    {addOns
-                      .filter((a) => a.id !== "membership")
-                      .map((opt) => {
-                        const selected =
-                          (inputs.addOnIds ?? []).indexOf(opt.id) >= 0;
-                        return (
-                          <button
-                            key={opt.id}
-                            type="button"
-                            onClick={() => {
-                              const ids = inputs.addOnIds ?? [];
-                              const next = selected
-                                ? ids.filter((x) => x !== opt.id)
-                                : [...ids, opt.id];
-                              setInputs({ addOnIds: next });
-                            }}
-                            className={`flex w-full items-center justify-between rounded-xl border-2 p-4 text-left transition ${
-                              selected
-                                ? "border-[#4C9BC8] bg-[#C2E4F0]/30"
-                                : "border-[#F0F0F0] hover:border-[#4C9BC8]/50"
-                            }`}
-                          >
-                            <span>
-                              {opt.title}{" "}
-                              {opt.price > 0 && (
-                                <span className="text-[#102341]/60">
-                                  +${opt.price}
-                                </span>
-                              )}
-                            </span>
-                            {selected && <span className="text-[#4C9BC8]">✓</span>}
-                          </button>
-                        );
-                      })}
-                  </div>
+                  <Input
+                    label="Name"
+                    placeholder="Jane Smith"
+                    value={inputs.contactName ?? ""}
+                    onChange={(e) => setInputs({ contactName: e.target.value })}
+                  />
+                  <Input
+                    label="Email"
+                    type="email"
+                    placeholder="jane@example.com"
+                    value={inputs.contactEmail ?? ""}
+                    onChange={(e) => setInputs({ contactEmail: e.target.value })}
+                  />
+                  <Input
+                    label="Phone"
+                    type="tel"
+                    placeholder="(555) 123-4567"
+                    value={inputs.contactPhone ?? ""}
+                    onChange={(e) => setInputs({ contactPhone: e.target.value })}
+                  />
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={inputs.consentToContact ?? false}
+                      onChange={(e) => setInputs({ consentToContact: e.target.checked })}
+                      className="rounded"
+                    />
+                    <span className="text-sm text-[#102341]/80">
+                      I consent to be contacted about this project
+                    </span>
+                  </label>
                 </div>
               )}
             </>

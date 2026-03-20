@@ -2,28 +2,16 @@ import type { AddOn } from "@/lib/types";
 
 export const addOns: AddOn[] = [
   {
-    id: "inspection",
-    title: "Full System Inspection",
-    price: 49,
-    description: "Complete check of all zones and components",
-  },
-  {
-    id: "priority",
-    title: "Priority Scheduling",
-    price: 25,
-    description: "Next available slot",
-  },
-  {
-    id: "membership",
-    title: "Storm Shield Membership",
-    price: 0,
-    description: "Seasonal service + discounts (inquire for details)",
-  },
-  {
     id: "tuneup",
     title: "Full System Tune-Up",
-    price: 79,
-    description: "Comprehensive check, adjustment, and optimization of all zones",
+    price: 249,
+    description: "Comprehensive check, adjustment, and optimization—up to 8 zones, +$25 per additional zone",
+  },
+  {
+    id: "winterization",
+    title: "Winterization",
+    price: 175,
+    description: "Blow-out and winter prep—up to 8 zones, +$15 per additional zone",
   },
   {
     id: "smart-controller",
@@ -32,9 +20,9 @@ export const addOns: AddOn[] = [
     description: "Install and set up a WiFi smart controller (hardware included)",
   },
   {
-    id: "annual-plan",
-    title: "Annual Maintenance Plan",
-    price: 149,
-    description: "Year-round care with seasonal service and priority scheduling",
+    id: "maintenance-plan",
+    title: "Storm Shield Maintenance Plan",
+    price: 349,
+    description: "Tune-up + winterization, priority scheduling, and more. See stormsprinklers.com/sprinkler-maintenance-plans",
   },
 ];

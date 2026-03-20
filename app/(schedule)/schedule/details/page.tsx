@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input } from "@/components/ui";
 import { useBooking } from "@/contexts/BookingContext";
 import { track } from "@/lib/analytics";
 import { captureAbandonmentContact } from "@/lib/abandonment";
+
+const STORAGE_KEY = "storm_booking_contact";
 
 export default function ScheduleDetailsPage() {
   const router = useRouter();
@@ -13,6 +15,7 @@ export default function ScheduleDetailsPage() {
   const [name, setName] = useState(customer.name ?? "");
   const [email, setEmail] = useState(customer.email ?? "");
   const [phone, setPhone] = useState(customer.phone ?? "");
+  const hasPrefilled = useRef(false);
   const [addressLine1, setAddressLine1] = useState(customer.addressLine1 ?? "");
   const [addressLine2, setAddressLine2] = useState(customer.addressLine2 ?? "");
   const [city, setCity] = useState(customer.city ?? "");
@@ -27,6 +30,34 @@ export default function ScheduleDetailsPage() {
   useEffect(() => {
     if (address && !zip) setZip(address);
   }, [address]);
+
+  useEffect(() => {
+    if (hasPrefilled.current) return;
+    try {
+      const raw = typeof window !== "undefined" ? sessionStorage.getItem(STORAGE_KEY) : null;
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { name?: string; email?: string; phone?: string; consentToContact?: boolean };
+      hasPrefilled.current = true;
+      if (parsed.name) {
+        setName(parsed.name);
+      }
+      if (parsed.email) {
+        setEmail(parsed.email);
+      }
+      if (parsed.phone) {
+        setPhone(parsed.phone);
+      }
+      updateCustomer({
+        name: parsed.name ?? "",
+        email: parsed.email ?? "",
+        phone: parsed.phone ?? "",
+        consentToContact: parsed.consentToContact,
+      });
+      sessionStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // ignore
+    }
+  }, [updateCustomer]);
 
   useEffect(() => {
     const handleBeforeUnload = () => {

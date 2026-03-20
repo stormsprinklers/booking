@@ -7,13 +7,13 @@ export const serviceCategories: ServiceCategory[] = [
     description: "Fix leaks, broken heads, pressure issues, or system not turning on",
   },
   {
-    id: "upgrade",
-    title: "Landscaping / Sprinkler Installation",
-    description: "New sprinkler system install, landscaping irrigation, or major upgrades",
-  },
-  {
     id: "seasonal",
     title: "Seasonal Service",
     description: "Spring start-up, winterization, or regular maintenance",
+  },
+  {
+    id: "installation",
+    title: "New Sprinkler System / Installation",
+    description: "Turf irrigation, sod, mulch, rock—new system design and install",
   },
 ];

@@ -31,7 +31,7 @@ export default function ScheduleConfirmPage() {
   }, [slot, pricingOption, router]);
 
   const buildJobNotes = () => {
-    const categoryLabel = { repair: "Repair", upgrade: "Upgrade/Install", seasonal: "Seasonal" }[serviceCategory] ?? serviceCategory;
+    const categoryLabel = { repair: "Repair", installation: "Installation", seasonal: "Seasonal" }[serviceCategory] ?? serviceCategory;
     const parts: string[] = [
       `Service category: ${categoryLabel}`,
       `Service: ${pricingOption?.title ?? "Online booking"}`,
@@ -50,8 +50,8 @@ export default function ScheduleConfirmPage() {
     try {
       const { start, end } = toISO(slot);
       const effectiveEmployeeId =
-        slot.technicianId ?? (serviceCategory === "upgrade" ? INSTALL_QUOTE_EMPLOYEE_ID : undefined);
-      if (serviceCategory !== "upgrade" && !effectiveEmployeeId) {
+        slot.technicianId ?? (serviceCategory === "installation" ? INSTALL_QUOTE_EMPLOYEE_ID : undefined);
+      if (serviceCategory !== "installation" && !effectiveEmployeeId) {
         setError("No technician is available for this time. Please choose another slot.");
         setSubmitting(false);
         return;

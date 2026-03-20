@@ -49,7 +49,7 @@ export default function ScheduleAvailabilityPage() {
     let cancelled = false;
     // For install quotes, fetch all employees so we can show the dedicated installer (they may not be in this zone in DB)
     const url =
-      serviceCategory === "upgrade"
+      serviceCategory === "installation"
         ? "/api/housecall/employees"
         : `/api/housecall/employees?service_zone_id=${encodeURIComponent(serviceAreaId)}`;
     fetch(url)
@@ -63,7 +63,7 @@ export default function ScheduleAvailabilityPage() {
             photoUrl: e.photoUrl,
           })
         );
-        if (serviceCategory === "upgrade") {
+        if (serviceCategory === "installation") {
           const install = emps.find((e: { id: string }) => e.id === INSTALL_QUOTE_EMPLOYEE_ID);
           emps = install
             ? [install]

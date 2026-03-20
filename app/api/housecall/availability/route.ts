@@ -203,7 +203,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (category === "upgrade") {
+    if (category === "installation") {
       const rows = await sql`
         SELECT id, name
         FROM hcp_employees
@@ -231,7 +231,7 @@ export async function GET(request: NextRequest) {
       const slotWindows = windowsToSlots(raw);
 
       const debug = {
-        branch: "upgrade",
+        branch: "installation",
         source: "booking_windows_minus_jobs",
         serviceZoneId,
         query: {

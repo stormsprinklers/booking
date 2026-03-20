@@ -1,5 +1,5 @@
 // Service categories
-export type ServiceCategoryId = "repair" | "upgrade" | "seasonal";
+export type ServiceCategoryId = "repair" | "seasonal" | "installation";
 
 export interface ServiceCategory {
   id: ServiceCategoryId;
@@ -19,6 +19,7 @@ export interface PricingOption {
   estimatedDuration: string;
   includes: string[];
   addOns?: AddOn[];
+  customerMessage?: string;
 }
 
 export interface AddOn {
@@ -34,10 +35,26 @@ export interface PricingInputs {
   propertySize?: "small" | "medium" | "large";
   issueType?: string;
   issueTypes?: string[];
-  scope?: string;
   addOnIds?: string[];
-  urgency?: "standard" | "priority" | "emergency";
-  issueStartTime?: "today" | "within-week" | "weeks-ago" | "ongoing" | "dont-know";
+  // Repair
+  repairFollowUps?: Record<string, string>;
+  headCount?: number;
+  // Seasonal
+  seasonalServiceType?: "tuneup" | "winterization" | "both";
+  zoneCount?: number;
+  zoneCountUnknown?: boolean;
+  // Installation
+  turfSqFt?: number;
+  hasExistingSprinklers?: boolean;
+  waterType?: "culinary" | "secondary" | "dont-know";
+  sodSqFt?: number;
+  mulchSqFt?: number;
+  rockSqFt?: number;
+  // Contact (collected before price)
+  contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  consentToContact?: boolean;
 }
 
 // Service area & technicians
@@ -78,6 +95,7 @@ export interface Customer {
   state?: string;
   zip?: string;
   notes?: string;
+  consentToContact?: boolean;
 }
 
 export interface Booking {
