@@ -2,12 +2,14 @@ import Link from "next/link";
 import Image from "next/image";
 import { Footer } from "@/components/ui";
 
+const homeHref = process.env.NEXT_PUBLIC_SITE === "booking" ? "/booking" : "/pricing";
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-[#F0F0F0] bg-white">
         <div className="mx-auto flex h-24 max-w-4xl items-center justify-between px-4">
-          <Link href="/pricing" className="flex items-center">
+          <Link href={homeHref} className="flex items-center">
             <Image
               src="/storm-logo.png"
               alt="Storm Sprinklers - Repair & Installation"

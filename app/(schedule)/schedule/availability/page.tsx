@@ -42,7 +42,7 @@ export default function ScheduleAvailabilityPage() {
 
   useEffect(() => {
     if (!serviceAreaId) {
-      router.push("/schedule");
+      router.push(process.env.NEXT_PUBLIC_SITE === "booking" ? "/booking" : "/schedule");
       return;
     }
     let cancelled = false;
@@ -78,7 +78,7 @@ export default function ScheduleAvailabilityPage() {
 
   useEffect(() => {
     if (!serviceAreaId) {
-      router.push("/schedule");
+      router.push(process.env.NEXT_PUBLIC_SITE === "booking" ? "/booking" : "/schedule");
       return;
     }
     let cancelled = false;

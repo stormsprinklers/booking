@@ -118,8 +118,12 @@ export default function ScheduleAddressPage() {
           <div className="mb-6 rounded-xl border border-[#F0F0F0] bg-[#F0F0F0]/50 p-4">
             <p className="text-[#102341]">
               No service selected.{" "}
+              <a href="/booking" className="font-medium text-[#4C9BC8] underline">
+                Book a service
+              </a>
+              {" or "}
               <a href="/pricing" className="font-medium text-[#4C9BC8] underline">
-                Get pricing first
+                get pricing first
               </a>
             </p>
           </div>

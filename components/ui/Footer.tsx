@@ -15,7 +15,7 @@ export function Footer() {
             <Link href="/pricing" className="text-[#102341] hover:text-[#4C9BC8] underline-offset-4 hover:underline">
               Get Pricing
             </Link>
-            <Link href="/schedule" className="text-[#102341] hover:text-[#4C9BC8] underline-offset-4 hover:underline">
+            <Link href="/booking" className="text-[#102341] hover:text-[#4C9BC8] underline-offset-4 hover:underline">
               Book Online
             </Link>
             <span className="text-[#102341]/50">Service areas</span>

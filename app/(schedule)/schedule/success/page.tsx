@@ -107,7 +107,7 @@ export default function ScheduleSuccessPage() {
         </div>
 
         <div className="mt-10 flex flex-col gap-4">
-          <Link href="/pricing">
+          <Link href={process.env.NEXT_PUBLIC_SITE === "booking" ? "/booking" : "/pricing"}>
             <Button variant="outline" fullWidth>
               Book another service
             </Button>

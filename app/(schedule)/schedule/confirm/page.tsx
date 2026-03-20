@@ -29,7 +29,7 @@ export default function ScheduleConfirmPage() {
 
   useEffect(() => {
     if (!slot) router.push("/schedule/availability");
-    else if (!pricingOption) router.push("/schedule");
+    else if (!pricingOption) router.push(process.env.NEXT_PUBLIC_SITE === "booking" ? "/booking" : "/schedule");
   }, [slot, pricingOption, router]);
 
   const buildJobNotes = () => {
