@@ -6,7 +6,7 @@ const TURF_TIERS = [
   { maxSqFt: 6000, rate: 0.65 },
   { maxSqFt: Infinity, rate: 0.5 },
 ];
-const TURF_MINIMUM = 1200;
+const TURF_MINIMUM = 1199;
 const TURF_DISCOUNT = 0.1;
 
 const CONNECTION_CULINARY = 2058.81;
@@ -19,11 +19,11 @@ const SOD_MIN_FEE = 150;
 
 const MULCH_RATE = 1.02;
 const MULCH_BLOCK_SQFT = 1500;
-const MULCH_BLOCK_FEE = 200;
+const MULCH_BLOCK_FEE = 199;
 
 const ROCK_RATE = 2.0;
 const ROCK_BLOCK_SQFT = 1500;
-const ROCK_BLOCK_FEE = 200;
+const ROCK_BLOCK_FEE = 199;
 
 const PROPERTY_SIZE_SQFT: Record<string, number> = {
   small: 2000,
@@ -122,7 +122,7 @@ export function getInstallationEstimate(inputs: PricingInputs): InstallationEsti
 
   const parts: string[] = [];
   if (turfArea) parts.push(`${turfArea.toLocaleString()} sq ft turf irrigation`);
-  if (!hasExistingSprinklers) parts.push(waterType === "culinary" ? "culinary connection" : waterType === "secondary" ? "secondary connection" : "connection (est.)");
+  if (!hasExistingSprinklers) parts.push(waterType === "culinary" ? "city water connection" : waterType === "secondary" ? "irrigation water connection" : "connection (est.)");
   if (sodSqFt) parts.push(`${sodSqFt} sq ft sod`);
   if (mulchSqFt) parts.push(`${mulchSqFt} sq ft mulch`);
   if (rockSqFt) parts.push(`${rockSqFt} sq ft rock`);

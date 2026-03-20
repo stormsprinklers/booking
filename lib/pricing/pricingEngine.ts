@@ -5,6 +5,79 @@ import { getInstallationEstimate } from "./installationEngine";
 
 const REPAIR_MINIMUM = 50;
 
+/** Personalized repair title based on selected issues and follow-ups */
+function getRepairTitle(issueIds: string[], repairFollowUps: Record<string, string>): string {
+  const titles: string[] = [];
+  for (const issueId of issueIds) {
+    const followUp = repairFollowUps[issueId];
+    let title: string;
+    switch (issueId) {
+      case "not-turning-on":
+        title =
+          followUp === "one-section"
+            ? "Solenoid or wiring repair"
+            : followUp === "one-section-old"
+              ? "Valve box repair"
+              : followUp === "whole-system"
+                ? "System startup repair"
+                : "Won't turn on repair";
+        break;
+      case "not-turning-off":
+        title =
+          followUp === "no"
+            ? "Valve diaphragm repair"
+            : followUp === "yes"
+              ? "Valve box replacement"
+              : "Won't turn off repair";
+        break;
+      case "low-pressure":
+        title = "Low pressure diagnosis & repair";
+        break;
+      case "leak":
+        title = followUp === "yes" ? "Leak repair (difficult access)" : "Leak repair";
+        break;
+      case "coverage-issues":
+        title = "Coverage tune-up";
+        break;
+      case "broken-backflow":
+        title =
+          followUp === "install"
+            ? "Backflow device installation"
+            : followUp === "crack"
+              ? "Backflow device replacement"
+              : followUp === "vent"
+                ? "Backflow drain repair"
+                : "Backflow repair service";
+        break;
+      case "main-shutoff":
+        title = "Main shutoff valve replacement";
+        break;
+      case "electrical-error":
+        title = "Electrical wiring repair";
+        break;
+      case "broken-heads":
+        title = "Sprinkler head replacement";
+        break;
+      case "moving-adding-heads":
+        title = "Sprinkler head move or add";
+        break;
+      case "drip-irrigation":
+        title = "Drip irrigation installation";
+        break;
+      case "general":
+        title = "Sprinkler system diagnosis";
+        break;
+      default:
+        title = "Repair service";
+    }
+    titles.push(title);
+  }
+  if (titles.length === 0) return "Sprinkler system diagnosis";
+  if (titles.length === 1) return titles[0];
+  if (titles.length === 2) return `${titles[0]} & ${titles[1]}`;
+  return `${titles[0]}, ${titles[1]} & more`;
+}
+
 export function getPricingOptions(inputs: PricingInputs): PricingOption[] {
   const { serviceCategory, addOnIds = [] } = inputs;
 
@@ -36,8 +109,8 @@ function getRepairPricing(inputs: PricingInputs): PricingOption[] {
 
     if (issue.id === "moving-adding-heads") {
       const heads = Math.max(1, headCount);
-      min = 150 * heads;
-      max = 200 * heads;
+      min = 149 * heads;
+      max = 199 * heads;
     } else if (issue.hasFollowUp && issue.followUpOptions && repairFollowUps[issueId]) {
       const opt = issue.followUpOptions.find((o) => o.id === repairFollowUps[issueId]);
       if (opt) {
@@ -64,12 +137,13 @@ function getRepairPricing(inputs: PricingInputs): PricingOption[] {
   totalMax = Math.max(REPAIR_MINIMUM, Math.round(totalMax + addOnTotal));
 
   const selectedAddOns = addOns.filter((a) => addOnIds.includes(a.id));
+  const repairTitle = getRepairTitle(issueIds, repairFollowUps);
 
   return [
     {
       id: "repair-basic",
       tier: "single",
-      title: "Repair Service",
+      title: repairTitle,
       price: totalMin,
       priceRange: { min: totalMin, max: totalMax },
       description:
@@ -177,7 +251,7 @@ function getInstallationPricing(inputs: PricingInputs): PricingOption[] {
       includes: [
         "Free on-site or online quote",
         "Turf irrigation (tiered pricing)",
-        "Connection (culinary or secondary)",
+        "Connection (city or irrigation water)",
         result.hasSod || result.hasMulch || result.hasRock ? "Sod/mulch/rock as selected" : "Optional sod, mulch, rock available",
       ],
       customerMessage: `Most installations in this range run $${result.min}–$${result.max}. We'll give you a full quote before any work begins.`,

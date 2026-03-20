@@ -573,7 +573,7 @@ export default function PricingWizardPage() {
                           : "border-[#F0F0F0] hover:border-[#4C9BC8]/50"
                       }`}
                     >
-                      Culinary
+                      City water (drinking water)
                     </button>
                     <button
                       type="button"
@@ -584,7 +584,7 @@ export default function PricingWizardPage() {
                           : "border-[#F0F0F0] hover:border-[#4C9BC8]/50"
                       }`}
                     >
-                      Secondary
+                      Irrigation water (separate line)
                     </button>
                     <button
                       type="button"
