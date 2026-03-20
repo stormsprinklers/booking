@@ -94,6 +94,7 @@ export interface InstallationEstimateResult {
   hasSod: boolean;
   hasMulch: boolean;
   hasRock: boolean;
+  hasConnection: boolean;
 }
 
 export function getInstallationEstimate(inputs: PricingInputs): InstallationEstimateResult | null {
@@ -112,6 +113,7 @@ export function getInstallationEstimate(inputs: PricingInputs): InstallationEsti
 
   const turfCost = calculateTurfIrrigation(turfArea);
   const connectionCost = getConnectionCost(waterType, hasExistingSprinklers);
+  const hasConnection = !hasExistingSprinklers;
   const sodCost = calculateSod(sodSqFt ?? 0);
   const mulchCost = calculateMulch(mulchSqFt ?? 0);
   const rockCost = calculateRock(rockSqFt ?? 0);
@@ -134,5 +136,6 @@ export function getInstallationEstimate(inputs: PricingInputs): InstallationEsti
     hasSod: (sodSqFt ?? 0) > 0,
     hasMulch: (mulchSqFt ?? 0) > 0,
     hasRock: (rockSqFt ?? 0) > 0,
+    hasConnection,
   };
 }

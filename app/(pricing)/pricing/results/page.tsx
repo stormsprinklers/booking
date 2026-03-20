@@ -151,7 +151,7 @@ export default function PricingResultsPage() {
                       handleBook(opt);
                     }}
                   >
-                    Book this
+                    {inputs.serviceCategory === "installation" ? "Book an Appointment" : "Book this"}
                   </Button>
                 </div>
               </div>
@@ -183,7 +183,7 @@ export default function PricingResultsPage() {
                   >
                     <span className="font-semibold">Video call quote</span>
                     <span className="text-sm font-normal text-[#102341]/70">
-                      Schedule a video call and we&apos;ll walk through your project together.
+                      Get a quote for your project from the convenience of a zoom call. Not for new construction homes.
                     </span>
                   </Button>
                   <Button
@@ -221,3 +221,4 @@ export default function PricingResultsPage() {
     </div>
   );
 }
+

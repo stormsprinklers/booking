@@ -249,7 +249,12 @@ function getInstallationPricing(inputs: PricingInputs): PricingOption[] {
       includes: [
         "Free on-site or online quote",
         "Turf irrigation with tiered pricing",
-        "Connection for city or irrigation water",
+        ...(result.hasConnection
+          ? [
+              "Connection to city or irrigation water",
+              "Connection parts including filter, backflow device, and shutoff valve",
+            ]
+          : []),
         result.hasSod || result.hasMulch || result.hasRock ? "Sod/mulch/rock as selected" : "Optional sod, mulch, rock available",
       ],
       customerMessage: `Most installations in this range run $${result.min}–$${result.max}. We'll give you a full quote before any work begins.`,

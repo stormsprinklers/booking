@@ -332,7 +332,7 @@ export default function PricingWizardPage() {
                       className="rounded"
                     />
                     <span className="text-sm text-[#102341]/80">
-                      I consent to be contacted about this project
+                      I would like to be contacted about this project, and I understand that my quote is subject to on-site confirmation.
                     </span>
                   </label>
                 </div>
@@ -472,7 +472,7 @@ export default function PricingWizardPage() {
                       className="rounded"
                     />
                     <span className="text-sm text-[#102341]/80">
-                      I consent to be contacted about this project
+                      I would like to be contacted about this project, and I understand that my quote is subject to on-site confirmation.
                     </span>
                   </label>
                 </div>
@@ -561,7 +561,9 @@ export default function PricingWizardPage() {
               )}
               {step === 3 && (
                 <div>
-                  <p className="mb-3 font-medium text-[#102341]">What type of water?</p>
+                  <p className="mb-3 font-medium text-[#102341]">
+                    What kind of water source are your sprinklers connected to?
+                  </p>
                   <div className="space-y-2">
                     <button
                       type="button"
@@ -602,7 +604,10 @@ export default function PricingWizardPage() {
               {step === 4 && (
                 <div>
                   <p className="mb-3 font-medium text-[#102341]">
-                    Optional: sod, mulch, or rock
+                    Would you like to add sod, mulch, or decorative rock?
+                  </p>
+                  <p className="mb-4 text-sm text-[#102341]/70">
+                    Enter the total square footage for each item you want included.
                   </p>
                   <Input
                     label="Sod"
@@ -677,7 +682,7 @@ export default function PricingWizardPage() {
                       className="rounded"
                     />
                     <span className="text-sm text-[#102341]/80">
-                      I consent to be contacted about this project
+                      I would like to be contacted about this project, and I understand that my quote is subject to on-site confirmation.
                     </span>
                   </label>
                 </div>
