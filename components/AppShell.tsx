@@ -18,20 +18,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               unoptimized
             />
           </Link>
-          <nav className="flex gap-6 text-sm">
-            <Link
-              href="/pricing"
-              className="text-[#102341]/70 hover:text-[#102341]"
-            >
-              Get Pricing
-            </Link>
-            <Link
-              href="/schedule"
-              className="text-[#102341]/70 hover:text-[#102341]"
-            >
-              Book Online
-            </Link>
-          </nav>
+          <a
+            href="tel:801-709-0681"
+            className="rounded-lg bg-[#F17388] px-5 py-2.5 text-base font-medium text-white shadow-md hover:bg-[#F17388]/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.15)]"
+          >
+            801-709-0681
+          </a>
         </div>
       </header>
       <main className="flex-1">{children}</main>
