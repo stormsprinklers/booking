@@ -7,7 +7,7 @@ import { useBooking } from "@/contexts/BookingContext";
 import { track } from "@/lib/analytics";
 import { captureAbandonmentContact } from "@/lib/abandonment";
 
-const STORAGE_KEY = "storm_booking_contact";
+const STORAGE_KEY_CONTACT = "storm_booking_contact";
 
 export default function ScheduleDetailsPage() {
   const router = useRouter();
@@ -34,7 +34,7 @@ export default function ScheduleDetailsPage() {
   useEffect(() => {
     if (hasPrefilled.current) return;
     try {
-      const raw = typeof window !== "undefined" ? sessionStorage.getItem(STORAGE_KEY) : null;
+      const raw = typeof window !== "undefined" ? sessionStorage.getItem(STORAGE_KEY_CONTACT) : null;
       if (!raw) return;
       const parsed = JSON.parse(raw) as { name?: string; email?: string; phone?: string; consentToContact?: boolean };
       hasPrefilled.current = true;
@@ -53,7 +53,7 @@ export default function ScheduleDetailsPage() {
         phone: parsed.phone ?? "",
         consentToContact: parsed.consentToContact,
       });
-      sessionStorage.removeItem(STORAGE_KEY);
+      sessionStorage.removeItem(STORAGE_KEY_CONTACT);
     } catch {
       // ignore
     }

@@ -46,11 +46,6 @@ export default function PricingLandingPage() {
             </Link>
           ))}
         </div>
-
-        <p className="mt-12 text-center text-sm text-[#102341]/60">
-          No contact info required to see pricing. Choose your service to get
-          started.
-        </p>
       </div>
     </div>
   );

@@ -7,7 +7,8 @@ import { Button, Card } from "@/components/ui";
 import { usePricing } from "@/contexts/PricingContext";
 import { track } from "@/lib/analytics";
 
-const STORAGE_KEY = "storm_booking_contact";
+const STORAGE_KEY_CONTACT = "storm_booking_contact";
+const STORAGE_KEY_PRICING_INPUTS = "storm_booking_pricing_inputs";
 
 function formatPrice(opt: { price: number; priceRange?: { min: number; max: number } }) {
   if (opt.priceRange) {
@@ -31,11 +32,10 @@ export default function PricingResultsPage() {
     ? `/schedule?category=${inputs.serviceCategory}&optionId=${selectedOption.id}&price=${priceForBooking ?? selectedOption.price}&title=${encodeURIComponent(selectedOption.title)}&description=${encodeURIComponent(selectedOption.description ?? "")}`
     : "#";
 
-  const handleBookOnSite = () => {
-    if (!selectedOption) return;
+  const storeForBooking = () => {
     try {
       sessionStorage.setItem(
-        STORAGE_KEY,
+        STORAGE_KEY_CONTACT,
         JSON.stringify({
           name: inputs.contactName?.trim() ?? "",
           email: inputs.contactEmail?.trim() ?? "",
@@ -43,27 +43,21 @@ export default function PricingResultsPage() {
           consentToContact: inputs.consentToContact ?? false,
         })
       );
+      sessionStorage.setItem(STORAGE_KEY_PRICING_INPUTS, JSON.stringify(inputs));
     } catch {
       // ignore
     }
+  };
+
+  const handleBookOnSite = () => {
+    if (!selectedOption) return;
+    storeForBooking();
     router.push(bookingHref);
   };
 
   const handleBookVideoQuote = () => {
     if (!selectedOption) return;
-    try {
-      sessionStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({
-          name: inputs.contactName?.trim() ?? "",
-          email: inputs.contactEmail?.trim() ?? "",
-          phone: inputs.contactPhone?.trim() ?? "",
-          consentToContact: inputs.consentToContact ?? false,
-        })
-      );
-    } catch {
-      // ignore
-    }
+    storeForBooking();
     router.push(
       `/schedule/video-quote?category=${inputs.serviceCategory}&optionId=${selectedOption.id}&price=${priceForBooking ?? selectedOption.price}&title=${encodeURIComponent(selectedOption.title)}&description=${encodeURIComponent(selectedOption.description ?? "")}`
     );

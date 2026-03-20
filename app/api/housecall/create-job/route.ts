@@ -88,6 +88,7 @@ export async function POST(request: NextRequest) {
     const payload: hcp.CreateJobPayload = {
       customer_id: customerId,
       description: description || "Online booking",
+      lead_source: "Online Booking",
     };
     const line1 = addressLine1 || address || zip;
     if (line1 || city || state || zip) {

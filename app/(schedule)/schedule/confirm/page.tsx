@@ -6,6 +6,7 @@ import { Button, Card } from "@/components/ui";
 import { useBooking } from "@/contexts/BookingContext";
 import { track } from "@/lib/analytics";
 import { formatTechnicianDisplayName } from "@/lib/format/technicianName";
+import { formatPricingNotesForJob } from "@/lib/format/pricingNotesForJob";
 import { INSTALL_QUOTE_EMPLOYEE_ID } from "@/lib/config/installQuoteTech";
 
 function formatDayLabel(dateStr: string): string {
@@ -38,6 +39,21 @@ export default function ScheduleConfirmPage() {
       pricingOption?.description ? `Problem/Scope: ${pricingOption.description}` : "",
       pricingOption?.price != null ? `Quoted price online: $${pricingOption.price}${pricingOption?.priceRange ? `–$${pricingOption.priceRange.max}` : ""}` : "",
     ].filter(Boolean);
+
+    // Add diagnostic info from pricing wizard
+    try {
+      const raw = typeof window !== "undefined" ? sessionStorage.getItem("storm_booking_pricing_inputs") : null;
+      if (raw) {
+        const pricingInputs = JSON.parse(raw) as Record<string, unknown>;
+        const diagnosticNotes = formatPricingNotesForJob(pricingInputs);
+        if (diagnosticNotes.trim()) {
+          parts.push("Customer selections from online quote:\n" + diagnosticNotes);
+        }
+      }
+    } catch {
+      // ignore
+    }
+
     if (customer.notes?.trim()) parts.push(`Customer notes: ${customer.notes.trim()}`);
     return parts.join("\n\n");
   };
@@ -75,6 +91,11 @@ export default function ScheduleConfirmPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to create job");
+      try {
+        sessionStorage.removeItem("storm_booking_pricing_inputs");
+      } catch {
+        // ignore
+      }
       track("booking_completed", { service: pricingOption.title, slotId: slot.id, jobId: data.jobId });
       router.push("/schedule/success");
     } catch (e) {

@@ -214,6 +214,7 @@ export interface CreateJobPayload {
     assigned_employee_ids?: string[];
   };
   notes?: string;
+  lead_source?: string;
   job_fields?: {
     job_type_id?: string;
     business_unit_id?: string;
