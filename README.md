@@ -4,10 +4,11 @@ Production-ready web app for Storm Sprinklers: instant online pricing and seamle
 
 ## Routes
 
-- **Pricing flow:** `/pricing` → `/pricing/wizard` → `/pricing/results`
-- **Booking flow:** `/schedule` → `/schedule/availability` → `/schedule/details` → `/schedule/confirm` → `/schedule/success`
+- **Pricing flow:** `/pricing` → `/pricing/wizard` → `/pricing/results` → book → `/schedule/...`
+- **Direct booking:** `/booking` (zip + service) → `/schedule/availability` → `/schedule/details` → `/schedule/confirm` → `/schedule/success`
+- **From pricing:** `/schedule` (with quote params) → same schedule steps as above
 
-Subdomains (production): `pricing.stormsprinklers.com` and `schedule.stormsprinklers.com` route via middleware.
+Subdomains (production): e.g. `pricing.stormsprinklers.com` vs `booking.stormsprinklers.com` — set `NEXT_PUBLIC_SITE=pricing` or `booking` per deployment.
 
 ## Tech Stack
 
