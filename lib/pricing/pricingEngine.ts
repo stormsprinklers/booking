@@ -180,7 +180,7 @@ function getRepairPricing(inputs: PricingInputs): PricingOption[] {
       estimatedDuration: selectedAddOns.length ? "1.5–2.5 hours" : "1–2 hours",
       includes: [
         "Diagnosis",
-        "Repair labor",
+        "Repair labor and materials",
         "Flat-rate pricing—no surprise charges",
         "5-year warranty when we winterize your system",
       ],

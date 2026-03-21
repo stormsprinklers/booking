@@ -13,7 +13,7 @@ export function AppShell({
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-[#F0F0F0] bg-white">
         <div className="mx-auto flex h-24 max-w-4xl items-center justify-between px-4">
-          <Link href={homeHref} className="flex items-center">
+          <a href="https://stormsprinklers.com" className="flex items-center" rel="noopener noreferrer" target="_blank">
             <Image
               src="/storm-logo.png"
               alt="Storm Sprinklers - Repair & Installation"
@@ -23,7 +23,7 @@ export function AppShell({
               priority
               unoptimized
             />
-          </Link>
+          </a>
           <a
             href="tel:801-709-0681"
             className="rounded-lg bg-[#F17388] px-5 py-2.5 text-base font-medium text-white shadow-md hover:bg-[#F17388]/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.15)]"

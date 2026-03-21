@@ -11,7 +11,7 @@ export const DIRECT_BOOKING_OPTIONS: Record<ServiceCategoryId, PricingOption> = 
     priceRange: { min: 99, max: 399 },
     description: "We'll diagnose and provide a quote. Most repairs run $99–$399.",
     estimatedDuration: "1–2 hours",
-    includes: ["Diagnosis", "Repair labor", "Flat-rate pricing—no surprise charges"],
+    includes: ["Diagnosis", "Repair labor and materials", "Flat-rate pricing—no surprise charges"],
   },
   seasonal: {
     id: "direct-seasonal",
