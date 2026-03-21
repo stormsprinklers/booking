@@ -82,14 +82,6 @@ export default function PricingResultsPage() {
     router.push(bookingHref);
   };
 
-  const handleBookVideoQuote = () => {
-    if (!selectedOption) return;
-    storeForBooking();
-    router.push(
-      `/schedule/video-quote?category=${inputs.serviceCategory}&optionId=${selectedOption.id}&price=${priceForBooking ?? selectedOption.price}&title=${encodeURIComponent(selectedOption.title)}&description=${encodeURIComponent(selectedOption.description ?? "")}`
-    );
-  };
-
   if (options.length === 0) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -198,49 +190,15 @@ export default function PricingResultsPage() {
 
         <div className="mt-10 space-y-4">
           {selectedOption ? (
-            inputs.serviceCategory === "installation" ? (
-              <>
-                <p className="font-medium text-[#102341]">
-                  How would you like to get your quote?
-                </p>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Button
-                    variant="secondary"
-                    fullWidth
-                    size="lg"
-                    onClick={handleBookVideoQuote}
-                    className="h-auto flex-col items-start gap-2 py-4 text-left"
-                  >
-                    <span className="font-semibold">Video call quote</span>
-                    <span className="text-sm font-normal text-[#102341]/70">
-                      Get a quote for your project from the convenience of a zoom call. Not for new construction homes.
-                    </span>
-                  </Button>
-                  <Button
-                    variant="primary"
-                    fullWidth
-                    size="lg"
-                    onClick={handleBookOnSite}
-                    className="h-auto flex-col items-start gap-2 py-4 text-left"
-                  >
-                    <span className="font-semibold">On-site quote</span>
-                    <span className="text-sm font-normal text-white/90">
-                      Book an in-person visit to get a detailed quote at your property.
-                    </span>
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <Button
-                variant="primary"
-                fullWidth
-                size="lg"
-                className="w-full"
-                onClick={handleBookOnSite}
-              >
-                Book this service →
-              </Button>
-            )
+            <Button
+              variant="primary"
+              fullWidth
+              size="lg"
+              className="w-full"
+              onClick={handleBookOnSite}
+            >
+              {inputs.serviceCategory === "installation" ? "Book an Appointment" : "Book this service"} →
+            </Button>
           ) : (
             <Button variant="primary" fullWidth size="lg" disabled className="w-full">
               Select an option above
