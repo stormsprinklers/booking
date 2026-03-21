@@ -32,3 +32,24 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
+
+@keyframes step-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.step-fade-in {
+  animation: step-fade-in 0.22s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step-fade-in {
+    animation: none;
+  }
+}

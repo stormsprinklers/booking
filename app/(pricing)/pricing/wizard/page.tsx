@@ -2,7 +2,7 @@
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Button, Input, Stepper } from "@/components/ui";
+import { Button, Input, StepFade, Stepper } from "@/components/ui";
 import { usePricing } from "@/contexts/PricingContext";
 import { serviceCategories } from "@/lib/mock/serviceCategories";
 import { addOns } from "@/lib/mock/addOns";
@@ -158,6 +158,7 @@ export default function PricingWizardPage() {
         </div>
 
         <div className="mt-8 space-y-6">
+          <StepFade key={`${categoryParam}-${step}`}>
           {categoryParam === "repair" && (
             <>
               {step === 1 && (
@@ -693,6 +694,7 @@ export default function PricingWizardPage() {
               )}
             </>
           )}
+          </StepFade>
         </div>
 
         <div className="mt-10 flex gap-4">

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, Card, Input } from "@/components/ui";
+import { Button, Card, Input, StepFade } from "@/components/ui";
 import { useBooking } from "@/contexts/BookingContext";
 import { validateAddress } from "@/lib/service-area/validateAddress";
 import { DIRECT_BOOKING_OPTIONS } from "@/lib/config/directBookingOptions";
@@ -76,7 +76,7 @@ export default function BookingPage() {
     <div className="min-h-screen bg-white">
       <div className="mx-auto max-w-xl px-4 py-12">
         {step === "zip" ? (
-          <>
+          <StepFade key="zip">
             <h1 className="text-2xl font-bold text-[#102341]">Book a service</h1>
             <p className="mt-2 text-[#102341]/70">
               Enter your zip code to see if we serve your area, then pick a service and choose a time.
@@ -118,9 +118,9 @@ export default function BookingPage() {
                 </Card>
               )}
             </div>
-          </>
+          </StepFade>
         ) : (
-          <>
+          <StepFade key="service">
             <h1 className="text-2xl font-bold text-[#102341]">What service do you need?</h1>
             <p className="mt-2 text-[#102341]/70">
               Select a service, then we&apos;ll show you available times.
@@ -158,7 +158,7 @@ export default function BookingPage() {
                 Change zip code
               </button>
             </p>
-          </>
+          </StepFade>
         )}
 
         <p className="mt-10 text-center text-sm text-[#102341]/70">
