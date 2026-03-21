@@ -9,6 +9,7 @@ import { track } from "@/lib/analytics";
 import { formatTechnicianDisplayName } from "@/lib/format/technicianName";
 import { formatPricingNotesForJob } from "@/lib/format/pricingNotesForJob";
 import { INSTALL_QUOTE_EMPLOYEE_ID } from "@/lib/config/installQuoteTech";
+import { useIsBookingSite } from "@/lib/site/useSite";
 
 function formatDayLabel(dateStr: string): string {
   const d = new Date(dateStr + "T12:00:00");
@@ -23,13 +24,14 @@ function toISO(slot: { date: string; startTime: string; endTime: string }): { st
 
 export default function ScheduleConfirmPage() {
   const router = useRouter();
+  const isBookingSite = useIsBookingSite();
   const { pricingOption, slot, address, customer, serviceCategory } = useBooking();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!slot) router.push("/schedule/availability");
-    else if (!pricingOption) router.push(process.env.NEXT_PUBLIC_SITE === "booking" ? "/booking" : "/schedule");
+    else if (!pricingOption) router.push(isBookingSite ? "/booking" : "/schedule");
   }, [slot, pricingOption, router]);
 
   const buildJobNotes = () => {

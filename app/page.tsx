@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
+import { getHomeHref } from "@/lib/site/hostForSite";
 
-export default function HomePage() {
-  const site = process.env.NEXT_PUBLIC_SITE || "pricing";
-  redirect(site === "booking" ? "/booking" : "/pricing");
+export default async function HomePage() {
+  const homeHref = await getHomeHref();
+  redirect(homeHref);
 }

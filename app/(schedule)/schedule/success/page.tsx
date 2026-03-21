@@ -6,6 +6,7 @@ import { Button, Card } from "@/components/ui";
 import { QuoteBreakdown } from "@/components/QuoteBreakdown";
 import { getTechnicianPhotoUrl } from "@/lib/config/technicianPhotos";
 import { formatTechnicianDisplayName } from "@/lib/format/technicianName";
+import { useIsBookingSite } from "@/lib/site/useSite";
 
 function formatDayLabel(dateStr: string): string {
   const d = new Date(dateStr + "T12:00:00");
@@ -13,6 +14,7 @@ function formatDayLabel(dateStr: string): string {
 }
 
 export default function ScheduleSuccessPage() {
+  const isBookingSite = useIsBookingSite();
   const { pricingOption, slot, address, customer } = useBooking();
 
   if (!slot || !pricingOption) {
@@ -107,7 +109,7 @@ export default function ScheduleSuccessPage() {
         </div>
 
         <div className="mt-10 flex flex-col gap-4">
-          <Link href={process.env.NEXT_PUBLIC_SITE === "booking" ? "/booking" : "/pricing"}>
+          <Link href={isBookingSite ? "/booking" : "/pricing"}>
             <Button variant="outline" fullWidth>
               Book another service
             </Button>

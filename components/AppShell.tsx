@@ -2,9 +2,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { Footer } from "@/components/ui";
 
-const homeHref = process.env.NEXT_PUBLIC_SITE === "booking" ? "/booking" : "/pricing";
-
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  children,
+  homeHref = "/pricing",
+}: {
+  children: React.ReactNode;
+  homeHref?: string;
+}) {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-[#F0F0F0] bg-white">

@@ -8,6 +8,7 @@ import type { AvailabilitySlot } from "@/lib/types";
 import { track } from "@/lib/analytics";
 import { formatTechnicianDisplayName } from "@/lib/format/technicianName";
 import { getTechnicianPhotoUrl } from "@/lib/config/technicianPhotos";
+import { useIsBookingSite } from "@/lib/site/useSite";
 import { INSTALL_QUOTE_EMPLOYEE_ID } from "@/lib/config/installQuoteTech";
 
 function formatDayLabel(dateStr: string): string {
@@ -34,6 +35,7 @@ type Technician = { id: string; name: string; photoUrl?: string | null };
 
 export default function ScheduleAvailabilityPage() {
   const router = useRouter();
+  const isBookingSite = useIsBookingSite();
   const { serviceAreaId, serviceCategory, setSlot } = useBooking();
   const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
@@ -42,7 +44,7 @@ export default function ScheduleAvailabilityPage() {
 
   useEffect(() => {
     if (!serviceAreaId) {
-      router.push(process.env.NEXT_PUBLIC_SITE === "booking" ? "/booking" : "/schedule");
+      router.push(isBookingSite ? "/booking" : "/schedule");
       return;
     }
     let cancelled = false;
@@ -78,7 +80,7 @@ export default function ScheduleAvailabilityPage() {
 
   useEffect(() => {
     if (!serviceAreaId) {
-      router.push(process.env.NEXT_PUBLIC_SITE === "booking" ? "/booking" : "/schedule");
+      router.push(isBookingSite ? "/booking" : "/schedule");
       return;
     }
     let cancelled = false;
